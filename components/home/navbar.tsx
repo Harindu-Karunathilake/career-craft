@@ -16,6 +16,9 @@ export function SiteNavbar() {
       </Link>
       <NavigationMenu className="flex-1 justify-center ">
         <NavigationMenuList>
+             <NavigationMenuItem>
+            <NavigationMenuLink href="/" className="font-semibold">Home</NavigationMenuLink>
+          </NavigationMenuItem>
           <NavigationMenuItem>
             <NavigationMenuLink href="/interview" className="font-semibold">Interviews</NavigationMenuLink>
           </NavigationMenuItem>

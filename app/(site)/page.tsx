@@ -1,6 +1,6 @@
-import { WhyChooseUsSection } from "@/components/why-choose-us";
-import { ContactSection } from "@/components/contact-section";
-import { HeroSection } from "@/components/home/hero";
+import { WhyChooseUsSection } from "@/components/why-choose-us"
+import { ContactSection } from "@/components/contact-section"
+import { HeroSection } from "@/components/home/hero"
 
 export default function Home() {
   return (
@@ -9,5 +9,5 @@ export default function Home() {
       <WhyChooseUsSection />
       <ContactSection />
     </div>
-  );
+  )
 }
