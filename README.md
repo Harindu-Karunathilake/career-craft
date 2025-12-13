@@ -7,7 +7,7 @@ First, run the development server:
 ```bash
 npm run dev
 # or
-yarn dev
+
 # or
 pnpm dev
 # or
@@ -19,6 +19,24 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+
+## Firebase Setup
+
+1. Duplicate `.env.example` to `.env.local` and fill in your Firebase project values:
+
+```
+cp .env.example .env.local
+```
+
+2. Create a Firebase project (or reuse an existing one) and enable the products you need (Authentication, Firestore, etc.).
+3. Copy the config snippet from **Project settings → General → Your apps** and map the keys to the variables in `.env.local`.
+4. The shared Firebase instance lives in `lib/firebase.ts`. Import the helpers where needed:
+
+```ts
+import { firebaseAuth, firebaseDb } from "@/lib/firebase"
+```
+
+`firebaseAnalytics` is exported as a promise and only resolves in supported browsers.
 
 ## Learn More
 

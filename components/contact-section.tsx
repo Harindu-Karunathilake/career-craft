@@ -113,10 +113,10 @@ export function ContactSection() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="contact-message">Email template</Label>
+                  <Label htmlFor="contact-message">Message</Label>
                   <Textarea
                     id="contact-message"
-                    defaultValue={emailTemplate}
+                    
                     className="min-h-[220px] bg-black/40 text-white"
                   />
                 </div>

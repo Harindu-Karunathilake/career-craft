@@ -31,7 +31,7 @@ export function SiteNavbar() {
         </NavigationMenuList>
       </NavigationMenu>
       <Button asChild size="sm" className="min-w-24">
-        <Link href="/login">Log in</Link>
+        <Link href="/user">Dashboard</Link>
       </Button>
     </header>
   )
