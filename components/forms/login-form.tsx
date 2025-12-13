@@ -7,6 +7,7 @@ import {
   browserSessionPersistence,
   setPersistence,
   signInWithEmailAndPassword,
+  signOut,
 } from "firebase/auth"
 import { doc, getDoc } from "firebase/firestore"
 
@@ -73,7 +74,15 @@ function LoginForm() {
       let destination = "/user"
       try {
         const userDoc = await getDoc(doc(firebaseDb, "users", credential.user.uid))
-        const role = (userDoc.data()?.role as string | undefined) ?? "user"
+        const userData = userDoc.data()
+
+        if (userData?.status === "disabled") {
+          await signOut(firebaseAuth)
+          setError("This account has been disabled. Contact support for assistance.")
+          return
+        }
+
+        const role = (userData?.role as string | undefined) ?? "user"
         if (role === "admin") {
           destination = "/admin"
         }

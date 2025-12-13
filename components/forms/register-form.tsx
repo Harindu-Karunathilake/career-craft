@@ -69,6 +69,7 @@ function RegisterForm() {
           name: trimmedName || credential.user.displayName || "",
           email: credential.user.email,
           role: "user",
+          status: "active",
           wantsUpdates,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
