@@ -24,7 +24,7 @@ const GetStarted = () => {
                 Get started by creating interviews tailored to your job application using our AI agents. Customize your interview based on number of questions, difficulty, and topics.
               </p>
                 <Button asChild size="sm" className="min-w-24" variant="default">
-                        <Link href="/login">Create Interview</Link>
+                        <Link href="/interview/setup">Create Interview</Link>
                     </Button>
             </div>
           </main>

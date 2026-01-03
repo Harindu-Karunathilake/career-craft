@@ -1,41 +1,57 @@
 import Image from "next/image"
-
+import { Badge } from "@/components/ui/badge"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Calendar, Clock, ArrowRight } from "lucide-react"
 
 const publishedInterviews = [
 	{
 		id: 1,
 		company: "Northstar Robotics",
-		role: "Senior Product Manager",
-		summary: "How Avery navigated a PM loop with systems design, roadmap pitch, and exec alignment.",
+		title: "Senior Product Manager",
+        type: "Behavioral",
+        tech: ["Strategy", "Roadmap", "Leadership"],
+		date: "Posted 2 days ago",
+		duration: "45 min read",
 		image:
 			"https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&w=900&q=60",
+        status: "Featured"
 	},
 	{
 		id: 2,
 		company: "Atlas Bio",
-		role: "Lead Data Scientist",
-		summary: "Breakdown of a technical deep dive plus collaborative case on clinical model drift.",
+		title: "Lead Data Scientist",
+        type: "Technical",
+        tech: ["Deep Learning", "Python", "Clinical Models"],
+		date: "Posted 5 days ago",
+		duration: "60 min read",
 		image:
 			"https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?auto=format&fit=crop&w=900&q=60",
+        status: "Popular"
 	},
 	{
 		id: 3,
 		company: "Wave Commerce",
-		role: "Head of Growth",
-		summary: "From whiteboard metrics scenario to storytelling with the CEO in a final panel.",
+		title: "Head of Growth",
+        type: "Case Study",
+        tech: ["Growth", "Marketing", "Analytics"],
+		date: "Posted 1 week ago",
+		duration: "30 min read",
 		image:
 			"https://images.unsplash.com/photo-1529333166437-7750a6dd5a70?auto=format&fit=crop&w=900&q=60",
+        status: "New"
 	},
 	{
 		id: 4,
 		company: "Lumina Cloud",
-		role: "Staff SWE, Platform",
-		summary: "Coding challenge, architecture review, and leadership interview all in one day.",
+		title: "Staff SWE, Platform",
+        type: "System Design",
+        tech: ["Distributed Systems", "Go", "Kubernetes"],
+		date: "Posted 1 week ago",
+		duration: "90 min read",
 		image:
 			"https://images.unsplash.com/photo-1517430816045-df4b7de11d1d?auto=format&fit=crop&w=900&q=60",
+        status: "Detailed"
 	},
 ]
 
@@ -54,40 +70,71 @@ export function PublishedInterviews() {
 						Browse recent interviews, review prep notes, and bookmark insights to use for your next loop.
 					</p>
 				</div>
-				<div className="flex flex-col items-center justify-center gap-3 ">
+				<div className="flex flex-col items-center justify-center gap-3 mb-8">
 					<Input
 						placeholder="Search interviews, roles, or companies"
-						className="bg-white/5 text-white placeholder:text-white/40 md:max-w-sm"
+						className="bg-white/5 text-white placeholder:text-white/40 md:max-w-sm border-white/10"
 					/>
-					
 				</div>
 				<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
 					{publishedInterviews.map((interview) => (
-						<Card key={interview.id} className="border-white/10 bg-white/5 text-white backdrop-blur">
-							<CardHeader className="p-0">
-								<div className="relative h-48 w-full overflow-hidden rounded-t-xl">
-									<Image
-										src={interview.image}
-										alt={interview.company}
-										fill
-										sizes="(max-width: 768px) 100vw, 25vw"
-										className="object-cover" 
-									/>
-								</div>
-								<div className="space-y-1 px-6 pt-4">
-									<CardTitle className="text-xl">{interview.company}</CardTitle>
-									<CardDescription className="text-zinc-300">{interview.role}</CardDescription>
-								</div>
-							</CardHeader>
-							<CardContent className="px-6 py-4 text-sm text-zinc-200">
-								{interview.summary}
-							</CardContent>
-							<CardFooter className="px-6 pb-6">
-								<Button className="w-full" variant="secondary">
-									Read interview
-								</Button>
-							</CardFooter>
-						</Card>
+						<Card 
+                            key={interview.id} 
+                            className="group overflow-hidden rounded-2xl border-white/10 bg-white/5 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:border-primary/50 hover:bg-white/10 ring-0 outline-none"
+                        >
+                            <div className="relative h-48 w-full overflow-hidden">
+                            <Image 
+                                src={interview.image} 
+                                alt={interview.title}
+                                fill
+                                className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                            <div className="absolute bottom-3 left-3 right-3 flex justify-between items-end">
+                                <Badge variant="secondary" className="bg-white/90 text-black backdrop-blur-md shadow-sm border-none font-medium">
+                                {interview.type}
+                                </Badge>
+                                <Badge className="bg-primary/90 text-primary-foreground border-none backdrop-blur-md shadow-sm">
+                                    {interview.status}
+                                </Badge>
+                            </div>
+                            </div>
+                            
+                            <CardHeader className="p-4 pb-2">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <div className="flex items-center justify-between w-full mb-1">
+                                        <CardDescription className="text-xs font-medium text-primary uppercase tracking-wide">{interview.company}</CardDescription>
+                                    </div>
+                                    <CardTitle className="text-lg font-bold leading-tight text-white mb-2">{interview.title}</CardTitle>
+                                </div>
+                            </div>
+                            </CardHeader>
+                            
+                            <CardContent className="p-4 pt-0 space-y-4">
+                            <div className="flex flex-wrap gap-1.5 h-12 overflow-hidden content-start">
+                                {interview.tech.map((tech) => (
+                                <span 
+                                    key={tech} 
+                                    className="inline-flex items-center rounded-md bg-white/10 px-2 py-1 text-[10px] font-medium text-zinc-300 ring-1 ring-inset ring-white/10"
+                                >
+                                    {tech}
+                                </span>
+                                ))}
+                            </div>
+
+                            <div className="flex items-center justify-between border-t border-white/10 pt-3 text-xs text-zinc-400">
+                                <div className="flex items-center gap-1">
+                                <Calendar className="h-3.5 w-3.5" />
+                                <span>{interview.date}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                <Clock className="h-3.5 w-3.5" />
+                                <span>{interview.duration}</span>
+                                </div>
+                            </div>
+                            </CardContent>
+                        </Card>
 					))}
 				</div>
 			</div>

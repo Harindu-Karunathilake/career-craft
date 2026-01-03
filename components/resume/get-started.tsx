@@ -24,7 +24,7 @@ const GetStarted = () => {
                 Get started by analyzing your resume using our AI agents. Customize your analysis based on number of questions, difficulty, and topics.
               </p>
                 <Button asChild size="sm" className="min-w-24" variant="default">
-                        <Link href="/login">Analyze Resume</Link>
+                        <Link href="/resume/analyze">Analyze Resume</Link>
                     </Button>
             </div>
           </main>
