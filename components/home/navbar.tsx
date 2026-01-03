@@ -10,7 +10,7 @@ import {
 
 export function SiteNavbar() {
   return (
-    <header className="flex w-full items-center justify-between gap-6 px-6 py-3 ">
+    <header className="sticky top-0 z-50 glass flex w-full items-center justify-between gap-6 px-6 py-3">
       <Link href="/" className="text-lg font-semibold tracking-tight">
         CareerCraft
       </Link>
