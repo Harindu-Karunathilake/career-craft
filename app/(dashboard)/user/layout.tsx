@@ -17,7 +17,7 @@ export default function UserDashboardLayout({
           <div className="flex items-center gap-4">
             <SidebarTrigger className="-ml-2" />
             <div>
-              <p className="text-xs uppercase tracking-[0.35em] text-primary/80">Dashboard</p>
+              <p className="text-xs uppercase tracking-[0.35em] text-primary/80">User Interviews</p>
               <p className="text-lg font-semibold">Career progress</p>
             </div>
           </div>
