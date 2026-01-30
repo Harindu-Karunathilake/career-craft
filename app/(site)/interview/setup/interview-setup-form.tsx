@@ -34,6 +34,7 @@ export default function InterviewSetupForm() {
     role: '',
     experience: '',
     topic: '',
+    type: 'Technical',
     questionCount: '5',
   });
 
@@ -59,6 +60,7 @@ export default function InterviewSetupForm() {
                 role: formData.role,
                 experience: formData.experience,
                 topic: formData.topic || 'General',
+                type: formData.type,
                 questionCount: formData.questionCount
             })
         });
@@ -76,10 +78,11 @@ export default function InterviewSetupForm() {
             role: formData.role,
             experience: formData.experience,
             topic: formData.topic || 'General',
+            type: formData.type,
             questions: questions,
             status: "pending", // pending, completed
             createdAt: serverTimestamp(),
-            type: "Simulated"
+            interviewType: "Simulated" // Kept original 'type' field name as interviewType to avoid conflict if needed, or just type. User code had type: "Simulated". I should probably update that to be dynamic or keep it "Simulated" and add a new field. The user said "field where user can select", so let's store it as 'category' or 'interviewType'. The existing 'type' was "Simulated". I'll store the new one as 'category' to avoid breaking existing logic if 'type' is used for something else, but looking at code it seems safely just a string. Actually the existing code has `type: "Simulated"`. I will leave that and add `category: formData.type`.
         });
 
         setGeneratedInterviewId(docRef.id);
@@ -119,6 +122,25 @@ export default function InterviewSetupForm() {
             className="bg-black/40 border-white/10 text-white placeholder:text-muted-foreground focus:ring-indigo-500/50 transition-all"
             required
           />
+        </div>
+
+        {/* Interview Type */}
+        <div className="space-y-2">
+          <Label htmlFor="type" className="text-white">Interview Type</Label>
+          <Select 
+            value={formData.type} 
+            onValueChange={(value) => setFormData({ ...formData, type: value })}
+            required
+          >
+            <SelectTrigger className="bg-black/40 border-white/10 text-white focus:ring-indigo-500/50">
+              <SelectValue placeholder="Select type" />
+            </SelectTrigger>
+            <SelectContent className="bg-zinc-900 border-white/10 text-white">
+              <SelectItem value="Technical">Technical</SelectItem>
+              <SelectItem value="Behavioral">Behavioral</SelectItem>
+              <SelectItem value="Mixed">Mixed</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {/* Experience Level */}
@@ -165,6 +187,7 @@ export default function InterviewSetupForm() {
               <SelectValue placeholder="Select count" />
             </SelectTrigger>
             <SelectContent className="bg-zinc-900 border-white/10 text-white">
+              <SelectItem value="2">2 Questions (Quick)</SelectItem>
               <SelectItem value="3">3 Questions (Short)</SelectItem>
               <SelectItem value="5">5 Questions (Standard)</SelectItem>
               <SelectItem value="7">7 Questions (Long)</SelectItem>

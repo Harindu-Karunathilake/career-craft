@@ -11,7 +11,7 @@ export async function POST(req: Request) {
             return new Response(JSON.stringify({ error: 'Configuration Error' }), { status: 500 });
         }
 
-        const { role, experience, topic, questionCount } = await req.json();
+        const { role, experience, topic, type, questionCount } = await req.json();
 
         const result = await generateObject({
             model: google('gemini-2.5-flash'),
@@ -19,7 +19,7 @@ export async function POST(req: Request) {
                 questions: z.array(z.string()),
             }),
             prompt: `
-        Prepare ${questionCount} interview questions for a ${role} position.
+        Prepare ${questionCount} ${type || 'technical'} interview questions for a ${role} position.
         Experience Level: ${experience}.
         Focus Topic: ${topic}.
         
