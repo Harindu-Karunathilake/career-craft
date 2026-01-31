@@ -1,153 +1,130 @@
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { FileText, Download, CheckCircle, Clock } from "lucide-react"
-import Image from "next/image"
-import { Button } from "@/components/ui/button"
+"use client";
 
-const resumes = [
-  {
-    id: 1,
-    title: "Senior Full Stack Engineer",
-    target: "Google",
-    atsScore: 92,
-    keywords: ["React", "Node.js", "System Design"],
-    lastUpdated: "2 mins ago",
-    image: "https://images.unsplash.com/photo-1586281380349-632531db7ed4?auto=format&fit=crop&q=80&w=600",
-    status: "Optimized"
-  },
-  {
-    id: 2,
-    title: "Product Manager",
-    target: "Uber",
-    atsScore: 85,
-    keywords: ["Strategy", "Agile", "User Research"],
-    lastUpdated: "4 hours ago",
-    image: "https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&q=80&w=600",
-    status: "Needs Review"
-  },
-  {
-    id: 3,
-    title: "AI/ML Engineer",
-    target: "OpenAI",
-    atsScore: 96,
-    keywords: ["PyTorch", "Transformers", "NLP"],
-    lastUpdated: "1 day ago",
-    image: "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&q=80&w=600",
-    status: "Optimized"
-  },
-  {
-    id: 4,
-    title: "Engineering Manager",
-    target: "Linear",
-    atsScore: 78,
-    keywords: ["Leadership", "Hiring", "Roadmap"],
-    lastUpdated: "3 days ago",
-    image: "https://images.unsplash.com/photo-1664575602554-2087b04935a5?auto=format&fit=crop&q=80&w=600",
-    status: "Draft"
-  },
-]
+import { Card } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Plus, FileText, Calendar, ArrowRight, Trash2 } from "lucide-react"
+import Link from "next/link"
+import { useEffect, useState } from "react"
+import { collection, query, orderBy, getDocs, deleteDoc, doc } from "firebase/firestore"
+import { firebaseDb, firebaseAuth } from "@/lib/firebase"
+import { useRouter } from "next/navigation"
 
 export default function UserResumePage() {
-  return (
-    <div className="space-y-8 animate-in fade-in-50 duration-500">
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">Resume Vault</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Tailored Versions</h1>
-        </div>
-      </div>
+    const [resumes, setResumes] = useState<any[]>([]);
+    const [loading, setLoading] = useState(true);
+    const router = useRouter();
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {resumes.map((resume) => (
-          <Card 
-            key={resume.id} 
-            className="group overflow-hidden rounded-2xl border-border/50 bg-card/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:border-primary/20 hover:bg-card"
-          >
-            <div className="relative h-48 w-full overflow-hidden">
-              <Image 
-                src={resume.image} 
-                alt={resume.title}
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <div className="absolute bottom-3 left-3 right-3 flex justify-between items-end">
-                <Badge variant="outline" className="bg-black/40 text-white backdrop-blur-md border-white/20">
-                  {resume.target}
-                </Badge>
-                <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-medium text-white/90">ATS Score</span>
-                    <Badge 
-                        className={`border-none backdrop-blur-md shadow-sm ${
-                            resume.atsScore >= 90 ? "bg-emerald-500/90 text-white" : 
-                            resume.atsScore >= 80 ? "bg-yellow-500/90 text-black" : 
-                            "bg-orange-500/90 text-white"
-                        }`}
-                    >
-                        {resume.atsScore}
-                    </Badge>
-                </div>
-              </div>
-            </div>
-            
-            <CardHeader className="p-4 pb-2">
-              <div className="flex justify-between items-start">
-                 <div>
-                    <CardTitle className="text-lg font-semibold leading-tight">{resume.title}</CardTitle>
-                    <CardDescription className="text-sm font-medium text-primary mt-1 flex items-center gap-1.5">
-                        {resume.status === "Optimized" ? (
-                            <CheckCircle className="h-3.5 w-3.5 text-emerald-500" />
-                        ) : (
-                            <Clock className="h-3.5 w-3.5" />
-                        )}
-                        <span className={resume.status === "Optimized" ? "text-emerald-600 dark:text-emerald-400" : ""}>
-                            {resume.status}
-                        </span>
-                    </CardDescription>
-                 </div>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="p-4 pt-2 space-y-4">
-              <div className="flex flex-wrap gap-1.5">
-                {resume.keywords.map((keyword) => (
-                  <span 
-                    key={keyword} 
-                    className="inline-flex items-center rounded-md bg-secondary/50 px-2 py-1 text-xs font-medium text-secondary-foreground ring-1 ring-inset ring-black/5 dark:ring-white/10"
-                  >
-                    {keyword}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex items-center gap-2 pt-2">
-                 <Button variant="outline" size="sm" className="flex-1 h-8 text-xs font-medium">
-                    Edit
-                 </Button>
-                 <Button size="sm" className="h-8 w-8 px-0 shrink-0">
-                    <Download className="h-3.5 w-3.5" />
-                 </Button>
-              </div>
-
-              <div className="flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <FileText className="h-3.5 w-3.5" />
-                  <span>PDF • 1.2 MB</span>
-                </div>
-                <span>{resume.lastUpdated}</span>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+    useEffect(() => {
+        const fetchResumes = async () => {
+            const userId = firebaseAuth.currentUser?.uid;
+            if (userId) {
+                const q = query(
+                    collection(firebaseDb, "users", userId, "resumes"),
+                    orderBy("createdAt", "desc")
+                );
+                const querySnapshot = await getDocs(q);
+                const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                setResumes(data);
+            }
+            setLoading(false);
+        };
         
-        {/* Add New Mock Card */}
-        <button className="group relative flex h-full min-h-[350px] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-muted-foreground/25 bg-muted/5 transition-all hover:border-primary/50 hover:bg-muted/10">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary/20">
-              <span className="text-2xl font-light text-primary">+</span>
+        // Listen for auth state to ensure we have user
+        const unsubscribe = firebaseAuth.onAuthStateChanged((user) => {
+            if (user) {
+                fetchResumes();
+            } else {
+                setLoading(false);
+            }
+        });
+
+        return () => unsubscribe();
+    }, []);
+
+    const handleDelete = async (e: React.MouseEvent, resumeId: string) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if(!confirm("Are you sure you want to delete this analysis?")) return;
+        
+        const userId = firebaseAuth.currentUser?.uid;
+        if(!userId) return;
+
+        try {
+            await deleteDoc(doc(firebaseDb, "users", userId, "resumes", resumeId));
+            setResumes(resumes.filter(r => r.id !== resumeId));
+        } catch (error) {
+            console.error("Error deleting resume:", error);
+        }
+    }
+
+    return (
+        <div className="space-y-8 p-8">
+            <div className="flex items-center justify-between">
+                <div>
+                    <h1 className="text-3xl font-bold tracking-tight text-white">My Resumes</h1>
+                    <p className="text-muted-foreground mt-2">
+                        Manage and review your AI-analyzed resumes.
+                    </p>
+                </div>
+                <Link href="/resume/analyze">
+                    <Button className="bg-indigo-600 hover:bg-indigo-700">
+                        <Plus className="mr-2 h-4 w-4" /> New Analysis
+                    </Button>
+                </Link>
             </div>
-            <p className="font-medium text-muted-foreground group-hover:text-foreground">Create New Version</p>
-        </button>
-      </div>
-    </div>
-  )
+
+            {loading ? (
+                <div className="text-white">Loading...</div>
+            ) : resumes.length === 0 ? (
+                <Card className="flex flex-col items-center justify-center p-12 bg-white/5 border-dashed border-white/20">
+                    <div className="h-16 w-16 mb-4 rounded-full bg-indigo-500/10 flex items-center justify-center">
+                        <FileText className="h-8 w-8 text-indigo-400" />
+                    </div>
+                    <h3 className="text-xl font-medium text-white mb-2">No resumes analyzed yet</h3>
+                    <p className="text-muted-foreground mb-6 text-center max-w-sm">
+                        Upload your resume to get instant AI feedback on ATS compatibility, content, and structure.
+                    </p>
+                    <Link href="/resume/analyze">
+                        <Button variant="outline" className="border-indigo-500/50 text-indigo-400 hover:bg-indigo-500/10">
+                            Start First Analysis
+                        </Button>
+                    </Link>
+                </Card>
+            ) : (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {resumes.map((resume) => (
+                        <Link href={`/resume/${resume.id}`} key={resume.id}>
+                            <Card className="bg-white/5 border-white/10 p-6 hover:bg-white/10 transition-all cursor-pointer group relative overflow-hidden">
+                                <div className="flex items-start justify-between mb-4">
+                                    <div className="h-10 w-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
+                                        <FileText className="h-5 w-5 text-indigo-400" />
+                                    </div>
+                                    <div className="text-2xl font-bold text-white">
+                                        {resume.analysis?.overallScore || 0}
+                                        <span className="text-sm text-muted-foreground font-normal ml-1">/100</span>
+                                    </div>
+                                </div>
+                                
+                                <h3 className="font-semibold text-lg text-white mb-1 truncate">{resume.jobTitle}</h3>
+                                <p className="text-sm text-muted-foreground mb-4 truncate">{resume.companyName}</p>
+                                
+                                <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto">
+                                    <div className="flex items-center gap-1">
+                                        <Calendar className="h-3 w-3" />
+                                        {new Date(resume.createdAt).toLocaleDateString()}
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                         <Button variant="ghost" size="icon" className="h-6 w-6 hover:text-red-400" onClick={(e) => handleDelete(e, resume.id)}>
+                                            <Trash2 className="h-3 w-3" />
+                                         </Button>
+                                         <ArrowRight className="h-4 w-4 bg-transparent group-hover:translate-x-1 transition-transform text-indigo-400" />
+                                    </div>
+                                </div>
+                            </Card>
+                        </Link>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
 }

@@ -1,135 +1,170 @@
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calendar, Clock, ArrowRight } from "lucide-react"
-import Image from "next/image"
-import Link from "next/link"
+"use client";
 
-const interviews = [
-  {
-    id: 1,
-    title: "Frontend Developer",
-    company: "Lumina Cloud",
-    type: "Technical",
-    tech: ["React", "TypeScript", "System Design"],
-    date: "Today, 2:00 PM",
-    duration: "60 min",
-    image: "https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&q=80&w=600",
-    status: "Upcoming"
-  },
-  {
-    id: 2,
-    title: "Senior Product Manager", 
-    company: "Northstar Robotics",
-    type: "Behavioral",
-    tech: ["Leadership", "Strategy", "Agile"],
-    date: "Tomorrow, 10:00 AM",
-    duration: "45 min",
-    image: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=600",
-    status: "Scheduled"
-  },
-  {
-    id: 3,
-    title: "Backend Engineer",
-    company: "Atlas Bio",
-    type: "Technical",
-    tech: ["Node.js", "PostgreSQL", "AWS"],
-    date: "Dec 12, 11:30 AM",
-    duration: "60 min",
-    image: "https://images.unsplash.com/photo-1555099962-4199c345e5dd?auto=format&fit=crop&q=80&w=600",
-    status: "Completed"
-  },
-  {
-    id: 4,
-    title: "Full Stack Developer",
-    company: "Echo Systems",
-    type: "System Design",
-    tech: ["Architecture", "Scalability", "Redis"],
-    date: "Dec 15, 3:00 PM",
-    duration: "90 min",
-    image: "https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&q=80&w=600",
-    status: "Scheduled"
-  },
-]
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { firebaseDb, firebaseAuth } from "@/lib/firebase";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Play, FileText, RefreshCw, Plus, Calendar } from "lucide-react";
+import Link from "next/link";
+
+interface Interview {
+    id: string;
+    role: string;
+    experience: string;
+    topic: string;
+    status: "pending" | "completed";
+    createdAt: any;
+    feedback?: any;
+    questions?: string[];
+}
 
 export default function UserInterviewsPage() {
-  return (
-    <div className="space-y-8 animate-in fade-in-50 duration-500">
-      <div className="flex items-end justify-between">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">My Interviews</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Upcoming Sessions</h1>
+    const router = useRouter();
+    const [interviews, setInterviews] = useState<Interview[]>([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchInterviews = async (userId: string) => {
+            try {
+                const q = query(
+                    collection(firebaseDb, "users", userId, "interviews"),
+                    orderBy("createdAt", "desc")
+                );
+                
+                const querySnapshot = await getDocs(q);
+                const fetchedInterviews: Interview[] = [];
+                querySnapshot.forEach((doc) => {
+                    fetchedInterviews.push({ id: doc.id, ...doc.data() } as Interview);
+                });
+                
+                setInterviews(fetchedInterviews);
+            } catch (error) {
+                console.error("Error fetching interviews:", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        const unsubscribe = firebaseAuth.onAuthStateChanged((user) => {
+            if (user) {
+                fetchInterviews(user.uid);
+            } else {
+                // In a dashboard layout, maybe we don't redirect aggressively if the layout handles auth, 
+                // but good to keep.
+                router.push('/login');
+            }
+        });
+
+        return () => unsubscribe();
+    }, [router]);
+
+    if (loading) {
+        return (
+            <div className="flex h-96 items-center justify-center">
+                <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-8 animate-in fade-in-50 duration-500">
+            <div className="flex items-center justify-between">
+                <div>
+                     <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">My Interviews</p>
+                    <h1 className="text-3xl font-bold tracking-tight">Interview History</h1>
+                    <p className="text-muted-foreground mt-1">Manage your mock interviews and view feedback.</p>
+                </div>
+                <Button asChild className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 shadow-lg shadow-indigo-500/20">
+                    <Link href="/interview/setup">
+                        <Plus className="mr-2 h-4 w-4" />
+                        New Interview
+                    </Link>
+                </Button>
+            </div>
+
+            {interviews.length === 0 ? (
+                <Card className="bg-white/5 border-white/10 p-12 text-center">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="h-16 w-16 rounded-full bg-white/10 flex items-center justify-center">
+                            <FileText className="h-8 w-8 text-white/50" />
+                        </div>
+                        <h3 className="text-xl font-semibold text-foreground">No interviews yet</h3>
+                        <p className="text-muted-foreground max-w-sm mx-auto">
+                            Start your first AI-powered mock interview to practice and get feedback.
+                        </p>
+                        <Button asChild className="mt-4">
+                            <Link href="/interview/setup">Start Interview</Link>
+                        </Button>
+                    </div>
+                </Card>
+            ) : (
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                    {interviews.map((interview) => (
+                        <Card key={interview.id} className="bg-white/5 border-white/10 hover:border-white/20 transition-all flex flex-col hover:shadow-lg hover:shadow-emerald-500/5 group">
+                            <CardHeader>
+                                <div className="flex items-start justify-between">
+                                    <Badge variant={interview.status === 'completed' ? 'default' : 'outline'} className={interview.status === 'completed' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "text-yellow-500 border-yellow-500/20"}>
+                                        {interview.status === 'completed' ? 'Completed' : 'Pending'}
+                                    </Badge>
+                                    {interview.createdAt?.seconds && (
+                                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                                            <Calendar className="h-3 w-3" />
+                                            {new Date(interview.createdAt.seconds * 1000).toLocaleDateString()}
+                                        </span>
+                                    )}
+                                </div>
+                                <CardTitle className="text-foreground mt-2 truncate group-hover:text-indigo-400 transition-colors">{interview.role}</CardTitle>
+                                <CardDescription className="text-muted-foreground">
+                                    {interview.experience} • {interview.topic}
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="flex-1">
+                                <p className="text-sm text-muted-foreground line-clamp-2">
+                                    {interview.questions ? `${interview.questions.length} Questions generated.` : 'Questions ready.'}
+                                </p>
+                            </CardContent>
+                            <CardFooter className="pt-4 border-t border-white/5 gap-2">
+                                {interview.status === 'completed' ? (
+                                    <>
+                                        <Button variant="outline" className="flex-1 border-white/10 hover:bg-white/10 hover:text-white" asChild>
+                                            <Link href={`/interview/${interview.id}/feedback`}>
+                                                <FileText className="mr-2 h-4 w-4" />
+                                                Feedback
+                                            </Link>
+                                        </Button>
+                                        <Button variant="ghost" size="icon" className="hover:text-white" asChild>
+                                                <Link href="/interview/setup">
+                                                <RefreshCw className="h-4 w-4" />
+                                                <span className="sr-only">Retake</span>
+                                            </Link>
+                                        </Button>
+                                    </>
+                                ) : (
+                                    <Button className="w-full bg-indigo-600 hover:bg-indigo-700 text-white" asChild>
+                                        <Link href={`/interview/${interview.id}`}>
+                                            <Play className="mr-2 h-4 w-4" />
+                                            Start Now
+                                        </Link>
+                                    </Button>
+                                )}
+                            </CardFooter>
+                        </Card>
+                    ))}
+                    
+                     {/* Add New Mock Card (Optional addition to match previous design) */}
+                     <Link href="/interview/setup" className="flex">
+                        <button className="group relative flex h-full w-full flex-col items-center justify-center gap-4 rounded-xl border-2 border-dashed border-white/10 bg-white/5 transition-all hover:border-indigo-500/50 hover:bg-white/10 min-h-[250px]">
+                            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/10 transition-transform duration-300 group-hover:scale-110 group-hover:bg-indigo-500/20">
+                            <span className="text-2xl font-light text-indigo-500">+</span>
+                            </div>
+                            <p className="font-medium text-muted-foreground group-hover:text-white">Start New Interview</p>
+                        </button>
+                    </Link>
+                </div>
+            )}
         </div>
-      </div>
-
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {interviews.map((interview) => (
-          <Card 
-            key={interview.id} 
-            className="group overflow-hidden rounded-2xl border-border/50 bg-card/50 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg hover:border-primary/20 hover:bg-card"
-          >
-            <div className="relative h-48 w-full overflow-hidden">
-              <Image 
-                src={interview.image} 
-                alt={interview.title}
-                fill
-                className="object-cover transition-transform duration-500 group-hover:scale-105"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <div className="absolute bottom-3 left-3 right-3 flex justify-between items-end">
-                <Badge variant="secondary" className="bg-white/90 text-black backdrop-blur-md shadow-sm border-none font-medium">
-                  {interview.type}
-                </Badge>
-                {interview.status === "Upcoming" && (
-                  <Badge className="bg-blue-500/90 hover:bg-blue-500 border-none backdrop-blur-md shadow-sm">
-                    In 2 hours
-                  </Badge>
-                )}
-              </div>
-            </div>
-            
-            <CardHeader className="p-4 pb-2">
-              <div className="flex justify-between items-start">
-                 <div>
-                    <CardTitle className="text-lg font-semibold leading-tight">{interview.title}</CardTitle>
-                    <CardDescription className="text-sm font-medium text-primary mt-1">{interview.company}</CardDescription>
-                 </div>
-              </div>
-            </CardHeader>
-            
-            <CardContent className="p-4 pt-2 space-y-4">
-              <div className="flex flex-wrap gap-1.5">
-                {interview.tech.map((tech) => (
-                  <span 
-                    key={tech} 
-                    className="inline-flex items-center rounded-md bg-secondary/50 px-2 py-1 text-xs font-medium text-secondary-foreground ring-1 ring-inset ring-black/5 dark:ring-white/10"
-                  >
-                    {tech}
-                  </span>
-                ))}
-              </div>
-
-              <div className="flex items-center justify-between border-t pt-3 text-xs text-muted-foreground">
-                <div className="flex items-center gap-1">
-                  <Calendar className="h-3.5 w-3.5" />
-                  <span>{interview.date}</span>
-                </div>
-                <div className="flex items-center gap-1">
-                   <Clock className="h-3.5 w-3.5" />
-                   <span>{interview.duration}</span>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        
-        {/* Add New Mock Card */}
-        <button className="group relative flex h-full min-h-[350px] flex-col items-center justify-center gap-4 rounded-2xl border-2 border-dashed border-muted-foreground/25 bg-muted/5 transition-all hover:border-primary/50 hover:bg-muted/10">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 transition-transform duration-300 group-hover:scale-110 group-hover:bg-primary/20">
-              <span className="text-2xl font-light text-primary">+</span>
-            </div>
-            <p className="font-medium text-muted-foreground group-hover:text-foreground">Generate New Interview</p>
-        </button>
-      </div>
-    </div>
-  )
+    );
 }

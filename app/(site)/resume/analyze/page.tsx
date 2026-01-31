@@ -1,11 +1,170 @@
+"use client";
+
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { UploadCloud, FileText, CheckCircle2 } from "lucide-react"
+import { UploadCloud, FileText, CheckCircle2, Loader2, Play } from "lucide-react"
+import { useState, ChangeEvent } from "react"
+import { usePuterStore } from "@/lib/puter"
+import { convertPdfToImage } from "@/lib/pdf2img"
+import { prepareInstructions } from "@/constants/resume-analysis"
+import { firebaseDb, firebaseAuth } from "@/lib/firebase"
+import { doc, setDoc, collection } from "firebase/firestore"
+import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
 
 export default function ResumeAnalyzePage() {
+  const { auth, isLoading: isPuterLoading, fs, ai, init } = usePuterStore();
+  const [file, setFile] = useState<File | null>(null);
+  const [jobTitle, setJobTitle] = useState("");
+  const [companyName, setCompanyName] = useState("");
+  const [jobDescription, setJobDescription] = useState("");
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [statusText, setStatusText] = useState("");
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    init();
+    const unsubscribe = firebaseAuth.onAuthStateChanged((user) => {
+        if (user) {
+            setCurrentUser(user);
+        } else {
+            setCurrentUser(null);
+            // Optional: Redirect to login or show non-blocking alert
+        }
+    });
+    return () => unsubscribe();
+  }, [init]);
+
+  const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setFile(e.target.files[0]);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+        setFile(e.dataTransfer.files[0]);
+    }
+  };
+
+  const handleAnalyze = async () => {
+    if (!file || !jobTitle || !companyName || !jobDescription) return;
+    
+    // Puter Auth Check
+    if (!auth.isAuthenticated) {
+        setStatusText("Please sign in to Puter.js...");
+        await auth.signIn();
+        // Wait for auth to complete? The hook might handle state, but let's re-check
+        // In a real flow we might need to wait or rely on the updated state.
+        // For now, let's assume sign-in is a blocking popup or flow.
+    }
+    
+    // Re-check auth or proceed if we assume success (or let user click again)
+    // Ideally we should wait for auth.isAuthenticated to be true, but that's async via effect.
+    // For this attempt, we'll try to proceed, if it fails, error will be caught.
+
+    setIsAnalyzing(true);
+    setStatusText("Initializing analysis...");
+
+    try {
+        const storage = getStorage();
+        const userId = currentUser?.uid;
+        
+        if (!userId) {
+            setStatusText("Please log in to continue.");
+            // Optionally redirect here if you want to force it
+            // router.push("/login?next=/resume/analyze"); 
+            return;
+        }
+
+        // 1. Upload to Puter FS (Required for Analysis)
+        setStatusText("Uploading to temporary analysis environment...");
+        const uploadedFile = await fs.upload([file]);
+        if (!uploadedFile) throw new Error("Failed to upload to Puter");
+
+        // 2. Convert to Image (for visual preview)
+        setStatusText("Processing document...");
+        const imageResult = await convertPdfToImage(file);
+        if (!imageResult.file) {
+            console.error("PDF Conversion Error:", imageResult.error);
+            throw new Error(`Failed to convert PDF: ${imageResult.error}`);
+        }
+
+        // 3. Upload to Firebase Storage (Long term retention)
+        setStatusText("Saving documents...");
+        const timestamp = Date.now();
+        const resumeRef = ref(storage, `resumes/${userId}/${timestamp}_${file.name}`);
+        const imageRef = ref(storage, `resumes/${userId}/${timestamp}_preview.png`);
+
+        const [resumeSnapshot, imageSnapshot] = await Promise.all([
+            uploadBytes(resumeRef, file),
+            uploadBytes(imageRef, imageResult.file)
+        ]);
+
+        const resumeUrl = await getDownloadURL(resumeSnapshot.ref);
+        const imageUrl = await getDownloadURL(imageSnapshot.ref);
+
+        // 4. Run AI Analysis
+        setStatusText("Analyzing content against job description...");
+        const feedback = await ai.feedback(
+            uploadedFile.path,
+            prepareInstructions({ jobTitle, jobDescription })
+        );
+
+        if (!feedback) throw new Error("AI Analysis failed");
+
+        const feedbackText = typeof feedback.message.content === 'string'
+            ? feedback.message.content
+            : feedback.message.content[0].text;
+
+        // Parse JSON
+        const jsonMatch = feedbackText.match(/```json\s*([\s\S]*?)\s*```/) || feedbackText.match(/```\s*([\s\S]*?)\s*```/);
+        const jsonString = jsonMatch ? jsonMatch[1] : feedbackText;
+        let analysisData;
+        try {
+            analysisData = JSON.parse(jsonString);
+        } catch (e) {
+            console.error(e);
+            // Fallback or retry? For now, throw.
+            throw new Error("Failed to parse AI response");
+        }
+
+        // 5. Save to Firestore
+        setStatusText("Finalizing results...");
+        const resumeId = doc(collection(firebaseDb, "users", userId, "resumes")).id;
+        
+        await setDoc(doc(firebaseDb, "users", userId, "resumes", resumeId), {
+            id: resumeId,
+            companyName,
+            jobTitle,
+            jobDescription,
+            resumeUrl,
+            imageUrl,
+            analysis: analysisData,
+            createdAt: new Date().toISOString(),
+        });
+
+        // 6. Redirect
+        setStatusText("Done!");
+        router.push(`/resume/${resumeId}`);
+
+    } catch (error: any) {
+        console.error("Analysis Error:", error);
+        setStatusText(`Error: ${error.message || "Something went wrong"}`);
+        setIsAnalyzing(false); // Stop loading so user can retry
+    }
+  };
+
   return (
     <main className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-black font-sans py-20">
       {/* Background Effects */}
@@ -30,11 +189,23 @@ export default function ResumeAnalyzePage() {
                 <div className="grid gap-6 md:grid-cols-2">
                     <div className="space-y-2">
                         <Label htmlFor="job-title" className="text-white">Job Title</Label>
-                        <Input id="job-title" placeholder="e.g. Senior Product Manager" className="bg-black/20 border-white/10 text-white placeholder:text-white/30" />
+                        <Input 
+                            id="job-title" 
+                            placeholder="e.g. Senior Product Manager" 
+                            className="bg-black/20 border-white/10 text-white placeholder:text-white/30"
+                            value={jobTitle}
+                            onChange={(e) => setJobTitle(e.target.value)}
+                        />
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="company" className="text-white">Company Name</Label>
-                        <Input id="company" placeholder="e.g. Google" className="bg-black/20 border-white/10 text-white placeholder:text-white/30" />
+                        <Input 
+                            id="company" 
+                            placeholder="e.g. Google" 
+                            className="bg-black/20 border-white/10 text-white placeholder:text-white/30"
+                            value={companyName}
+                            onChange={(e) => setCompanyName(e.target.value)}
+                        />
                     </div>
                 </div>
                 
@@ -44,42 +215,81 @@ export default function ResumeAnalyzePage() {
                         id="description" 
                         placeholder="Paste the job description here..." 
                         className="min-h-[100px] bg-black/20 border-white/10 text-white placeholder:text-white/30 resize-none"
+                        value={jobDescription}
+                        onChange={(e) => setJobDescription(e.target.value)}
                     />
                 </div>
              </div>
 
-             <div className="p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-xl bg-black/20 m-6 transition-all hover:border-primary/50 hover:bg-white/5 group cursor-pointer">
+             <div 
+                className="p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-xl bg-black/20 m-6 transition-all hover:border-primary/50 hover:bg-white/5 group cursor-pointer relative"
+                onDragOver={handleDragOver}
+                onDrop={handleDrop}
+             >
                 <div className="h-16 w-16 mb-4 rounded-full bg-indigo-500/20 flex items-center justify-center transition-transform group-hover:scale-110">
                     <UploadCloud className="h-8 w-8 text-indigo-400" />
                 </div>
-                <h3 className="text-lg font-medium text-white mb-2">Click to upload or drag and drop</h3>
+                <h3 className="text-lg font-medium text-white mb-2">
+                    {file ? "File selected" : "Click to upload or drag and drop"}
+                </h3>
                 <p className="text-sm text-muted-foreground text-center max-w-xs">
-                    PDF, DOCX up to 10MB. We will analyze your resume for keywords, formatting, and impact.
+                    {file ? file.name : "PDF, DOCX up to 10MB. We will analyze your resume for keywords, formatting, and impact."}
                 </p>
+                <Input 
+                    type="file" 
+                    className="absolute inset-0 h-full w-full opacity-0 cursor-pointer" 
+                    accept=".pdf,.docx"
+                    onChange={handleFileChange}
+                />
              </div>
 
-             <div className="px-6 pb-6 space-y-4">
-                <div className="flex items-center gap-4 p-4 rounded-lg bg-white/5 border border-white/10">
-                    <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-blue-500/20">
-                        <FileText className="h-5 w-5 text-blue-400" />
+             {file && (
+                 <div className="px-6 pb-6 space-y-4">
+                    <div className="flex items-center gap-4 p-4 rounded-lg bg-white/5 border border-white/10">
+                        <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-blue-500/20">
+                            <FileText className="h-5 w-5 text-blue-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-white truncate">{file.name}</p>
+                            <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                        </div>
+                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-white truncate">resume_draft_v12.pdf</p>
-                        <p className="text-xs text-muted-foreground">1.2 MB</p>
-                    </div>
-                    <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-                </div>
-             </div>
+                 </div>
+             )}
         </Card>
 
         {/* Action Button */}
-        <div className="w-full flex justify-center">
+        <div className="w-full flex flex-col items-center gap-4">
             <Button 
                 size="lg" 
-                className="h-12 min-w-[200px] rounded-full bg-indigo-600 text-base font-medium text-white shadow-[0_0_20px_-5px_rgba(79,70,229,0.5)] transition-all hover:bg-indigo-500 hover:shadow-[0_0_30px_-5px_rgba(79,70,229,0.6)]"
+                className="h-12 min-w-[200px] rounded-full bg-indigo-600 text-base font-medium text-white shadow-[0_0_20px_-5px_rgba(79,70,229,0.5)] transition-all hover:bg-indigo-500 hover:shadow-[0_0_30px_-5px_rgba(79,70,229,0.6)] disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={handleAnalyze}
+                disabled={!file || !jobTitle || !companyName || !jobDescription || isAnalyzing}
             >
-                Start Analysis
+                {isAnalyzing ? (
+                   <>
+                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                     analyzing...
+                   </>
+                ) : (
+                    <>
+                      Start Analysis <Play className="ml-2 h-4 w-4 fill-current" />
+                    </>
+                )}
             </Button>
+            
+            {statusText && (
+                <p className={`text-sm ${statusText.startsWith("Error") ? "text-red-400" : "text-indigo-300"} animate-pulse`}>
+                    {statusText}
+                </p>
+            )}
+
+            {!auth.isAuthenticated && (
+                <p className="text-xs text-muted-foreground">
+                    Note: Analysis is powered by Puter.js and requires a separate sign-in.
+                </p>
+            )}
         </div>
 
       </div>

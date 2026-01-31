@@ -28,6 +28,7 @@ export default function RootLayout({
         suppressHydrationWarning
         className={`${geistSans.variable} ${geistMono.variable} antialiased min-h-screen bg-background text-foreground overflow-x-hidden`}
       >
+        <script src="https://js.puter.com/v2/"></script>
         {children}
       </body>
     </html>
