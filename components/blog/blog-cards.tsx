@@ -3,6 +3,7 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useMemo, useState } from "react"
+import { motion, AnimatePresence } from "framer-motion"
 
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -130,94 +131,159 @@ export function BlogCardsSection() {
 	const startIdx = (currentPage - 1) * POSTS_PER_PAGE
 	const visiblePosts = filtered.slice(startIdx, startIdx + POSTS_PER_PAGE)
 
+    const containerVariants: any = {
+        hidden: { opacity: 0 },
+        visible: {
+            opacity: 1,
+            transition: {
+                staggerChildren: 0.1
+            }
+        }
+    }
+
+    const itemVariants: any = {
+        hidden: { opacity: 0, y: 20 },
+        visible: {
+            opacity: 1,
+            y: 0,
+            transition: { duration: 0.5 }
+        }
+    }
+
 	return (
-		<section className="relative isolate w-full bg-black px-6 py-24 text-white sm:px-10">
-			<div
-				className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[radial-gradient(circle_at_top,rgba(8,145,178,0.18),transparent_65%)]"
-				aria-hidden="true"
-			/>
-			<div className="relative mx-auto flex w-full max-w-6xl flex-col gap-8">
-				<div className="space-y-4 text-left md:text-center">
-					<p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">From the blog</p>
-					<h2 className="text-3xl font-semibold sm:text-4xl">Playbooks, interviews, and career guidance.</h2>
-					<p className="text-base text-zinc-300 md:mx-auto md:max-w-3xl">
-						Curated essays from coaches, hiring managers, and candidates to help you stay ready for every stage.
-					</p>
+		<section className="relative isolate w-full min-h-screen bg-black px-6 py-24 text-white sm:px-10 overflow-hidden">
+			<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(8,145,178,0.15),transparent_65%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(124,58,237,0.1),transparent_50%)]" />
+
+			<div className="relative mx-auto flex w-full max-w-7xl flex-col gap-12 z-10">
+                {/* Header */}
+				<div className="space-y-6 text-center max-w-3xl mx-auto">
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6 }}
+                    >
+					    <p className="text-sm font-semibold uppercase tracking-[0.35em] text-cyan-400">From the blog</p>
+					    <h2 className="mt-3 text-4xl font-bold tracking-tight sm:text-5xl bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">
+                            Insights & Guidance
+                        </h2>
+					    <p className="mt-4 text-lg text-zinc-400 leading-relaxed">
+						    Curated essays, playbooks, and interviews from industry experts to help you navigate your career journey.
+					    </p>
+                    </motion.div>
+
+                    <motion.div 
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
+                        className="flex flex-col items-center justify-center gap-3 w-full max-w-md mx-auto"
+                    >
+					    <Input
+						    value={query}
+						    onChange={(event) => setQuery(event.target.value)}
+						    placeholder="Search articles..."
+						    className="bg-white/5 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-cyan-500/50 h-10 rounded-full px-6 transition-all hover:bg-white/10"
+					    />
+					    {error && <p className="text-sm text-red-400 animate-pulse">{error}</p>}
+                    </motion.div>
 				</div>
-				<div className="flex flex-col items-center justify-center gap-3 ">
-					<Input
-						value={query}
-						onChange={(event) => setQuery(event.target.value)}
-						placeholder="Search articles, topics, or authors"
-						className="bg-white/5 text-white placeholder:text-white/40 md:max-w-sm"
-					/>
-					{error && <p className="text-sm text-red-300">{error}</p>}
-				</div>
+
 				{isLoading ? (
 					<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
 						{Array.from({ length: 4 }).map((_, idx) => (
-							<div key={idx} className="h-64 animate-pulse rounded-2xl bg-white/5" />
+							<div key={idx} className="h-80 animate-pulse rounded-2xl bg-white/5 border border-white/5" />
 						))}
 					</div>
 				) : filtered.length === 0 ? (
-					<p className="text-center text-sm text-zinc-300">No articles matched your search.</p>
+						<motion.div 
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                        className="text-center py-20"
+                    >
+                        <p className="text-zinc-500 text-lg">No articles found matching &quot;{query}&quot;.</p>
+                        <Button variant="link" onClick={() => setQuery("")} className="text-cyan-400 mt-2">Clear search</Button>
+                    </motion.div>
 				) : (
 					<>
-						<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-							{visiblePosts.map((post) => (
-								<Card key={post.id} className="border-white/10 bg-white/5 text-white backdrop-blur flex flex-col h-full">
-									<CardHeader className="p-0">
-										<div className="relative h-48 w-full overflow-hidden rounded-t-xl">
-											<Image
-												src={post.image}
-												alt={post.title}
-												fill
-												sizes="(max-width: 768px) 100vw, 25vw"
-												className="object-cover"
-											/>
-										</div>
-										<div className="space-y-1 px-6 pt-4">
-											<CardDescription className="text-xs font-semibold uppercase tracking-[0.35em] text-primary/80">
-												{post.category}
-											</CardDescription>
-											<CardTitle className="text-xl line-clamp-2">{post.title}</CardTitle>
-										</div>
-									</CardHeader>
-									<CardContent className="px-6 py-4 text-sm text-zinc-200 flex-grow">
-										<p className="line-clamp-3">{post.summary}</p>
-									</CardContent>
-									<CardFooter className="flex items-center justify-between px-6 pb-6 text-xs text-zinc-400 mt-auto">
-										<span>By {post.author}</span>
-										<Button asChild className="text-xs" variant="secondary">
-											<Link href={post.link} target="_blank" rel="noreferrer">
-												Read article
-											</Link>
-										</Button>
-									</CardFooter>
-								</Card>
-							))}
-						</div>
-						<div className="flex flex-col items-center gap-3 pt-4 text-sm text-zinc-300 md:flex-row md:justify-end">
-							<p>
-								Page {currentPage} of {pageCount}
-							</p>
-							<div className="flex gap-2">
-								<Button
-									variant="outline"
-									disabled={currentPage === 1}
-									onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-								>
-									Previous
-								</Button>
-								<Button
-									variant="outline"
-									disabled={currentPage === pageCount}
-									onClick={() => setPage((prev) => Math.min(pageCount, prev + 1))}
-								>
-									Next
-								</Button>
-							</div>
-						</div>
+						<motion.div 
+                            variants={containerVariants}
+                            initial="hidden"
+                            animate="visible"
+                            className="grid gap-6 md:grid-cols-2 lg:grid-cols-4"
+                        >
+							<AnimatePresence mode="popLayout">
+                                {visiblePosts.map((post) => (
+								    <motion.div key={post.id} variants={itemVariants} layout>
+                                        <Card className="group h-full border-white/10 bg-white/5 text-white backdrop-blur-sm overflow-hidden transition-all hover:bg-white/10 hover:border-white/20 hover:-translate-y-1 hover:shadow-2xl hover:shadow-cyan-900/20">
+									        <CardHeader className="p-0">
+										        <div className="relative h-48 w-full overflow-hidden">
+											        <Image
+												        src={post.image}
+												        alt={post.title}
+												        fill
+												        sizes="(max-width: 768px) 100vw, 25vw"
+												        className="object-cover transition-transform duration-500 group-hover:scale-105"
+											        />
+                                                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+                                                    <div className="absolute bottom-3 left-4 right-4">
+                                                        <span className="inline-block px-2 py-1 rounded-md bg-cyan-500/20 border border-cyan-500/30 text-[10px] font-bold uppercase tracking-wider text-cyan-300 backdrop-blur-sm">
+                                                            {post.category}
+                                                        </span>
+                                                    </div>
+										        </div>
+										        <div className="px-6 pt-5 pb-2">
+											        <CardTitle className="text-lg font-bold leading-snug line-clamp-2 group-hover:text-cyan-300 transition-colors">
+                                                        {post.title}
+                                                    </CardTitle>
+										        </div>
+									        </CardHeader>
+									        <CardContent className="px-6 py-2 text-sm text-zinc-400 flex-grow leading-relaxed">
+										        <p className="line-clamp-3">{post.summary}</p>
+									        </CardContent>
+									        <CardFooter className="flex items-center justify-between px-6 pb-6 pt-4 text-xs text-zinc-500 mt-auto border-t border-white/5">
+										        <span>{post.author}</span>
+										        <Button asChild size="sm" variant="ghost" className="text-xs hover:text-cyan-400 hover:bg-cyan-500/10 p-0 h-auto font-medium">
+											        <Link href={post.link} target="_blank" rel="noreferrer" className="flex items-center gap-1">
+												        Read <svg width="12" height="12" viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M2.5 6H9.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/><path d="M6 2.5L9.5 6L6 9.5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round"/></svg>
+											        </Link>
+										        </Button>
+									        </CardFooter>
+								        </Card>
+                                    </motion.div>
+							    ))}
+                            </AnimatePresence>
+						</motion.div>
+                        
+                        {/* Pagination */}
+                        {pageCount > 1 && (
+						    <motion.div 
+                                initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.5 }}
+                                className="flex flex-col items-center gap-4 pt-8 text-sm text-zinc-400 md:flex-row md:justify-center border-t border-white/10 mt-8"
+                            >
+							    <p>
+								    Page {currentPage} of {pageCount}
+							    </p>
+							    <div className="flex gap-2">
+								    <Button
+									    variant="outline"
+                                        size="sm"
+									    disabled={currentPage === 1}
+									    onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+                                        className="border-white/10 bg-transparent hover:bg-white/5 text-white disabled:opacity-30"
+								    >
+									    Previous
+								    </Button>
+								    <Button
+									    variant="outline"
+                                        size="sm"
+									    disabled={currentPage === pageCount}
+									    onClick={() => setPage((prev) => Math.min(pageCount, prev + 1))}
+                                        className="border-white/10 bg-transparent hover:bg-white/5 text-white disabled:opacity-30"
+								    >
+									    Next
+								    </Button>
+							    </div>
+						    </motion.div>
+                        )}
 					</>
 				)}
 			</div>
