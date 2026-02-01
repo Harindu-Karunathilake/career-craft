@@ -165,7 +165,7 @@ export function BlogCardsSection() {
 					<>
 						<div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
 							{visiblePosts.map((post) => (
-								<Card key={post.id} className="border-white/10 bg-white/5 text-white backdrop-blur">
+								<Card key={post.id} className="border-white/10 bg-white/5 text-white backdrop-blur flex flex-col h-full">
 									<CardHeader className="p-0">
 										<div className="relative h-48 w-full overflow-hidden rounded-t-xl">
 											<Image
@@ -180,13 +180,13 @@ export function BlogCardsSection() {
 											<CardDescription className="text-xs font-semibold uppercase tracking-[0.35em] text-primary/80">
 												{post.category}
 											</CardDescription>
-											<CardTitle className="text-xl">{post.title}</CardTitle>
+											<CardTitle className="text-xl line-clamp-2">{post.title}</CardTitle>
 										</div>
 									</CardHeader>
-									<CardContent className="px-6 py-4 text-sm text-zinc-200">
-										{post.summary}
+									<CardContent className="px-6 py-4 text-sm text-zinc-200 flex-grow">
+										<p className="line-clamp-3">{post.summary}</p>
 									</CardContent>
-									<CardFooter className="flex items-center justify-between px-6 pb-6 text-xs text-zinc-400">
+									<CardFooter className="flex items-center justify-between px-6 pb-6 text-xs text-zinc-400 mt-auto">
 										<span>By {post.author}</span>
 										<Button asChild className="text-xs" variant="secondary">
 											<Link href={post.link} target="_blank" rel="noreferrer">

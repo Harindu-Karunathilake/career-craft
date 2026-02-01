@@ -1,29 +1,65 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+"use client"
 
-const metrics = [
-  { label: "Active users", value: "1,248", change: "+3.2% WoW" },
-  { label: "New signups", value: "87", change: "+12 today" },
-  { label: "Pending invites", value: "34", change: "5 awaiting approval" },
-  { label: "Support tickets", value: "6", change: "2 high priority" },
-]
+import { useEffect, useState } from "react"
+import { collection, getDocs, query, collectionGroup } from "firebase/firestore"
+import { firebaseDb } from "@/lib/firebase"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { AdminAnalyticsCards } from "@/components/dashboard/admin-analytics-cards"
+import { DemandingJobsChart } from "@/components/dashboard/demanding-jobs-chart"
 
 export default function AdminOverviewPage() {
+  const [userCount, setUserCount] = useState(0)
+  const [jobStats, setJobStats] = useState<{ role: string; count: number }[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const usersSnapshot = await getDocs(collection(firebaseDb, "users"))
+        setUserCount(usersSnapshot.size)
+
+        // Fetch Interviews for usage stats
+        const interviewsSnapshot = await getDocs(collectionGroup(firebaseDb, "interviews"))
+        const roleCounts: Record<string, number> = {}
+        
+        interviewsSnapshot.forEach(doc => {
+            const data = doc.data()
+            const role = data.role as string || "Unknown"
+            roleCounts[role] = (roleCounts[role] || 0) + 1
+        })
+
+        const sortedRoles = Object.entries(roleCounts)
+            .map(([role, count]) => ({ role, count }))
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 5)
+
+        setJobStats(sortedRoles)
+
+      } catch (error) {
+        console.error("Error fetching admin stats:", error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+  }, [])
+
+  if (loading) {
+    return <div className="p-8 text-white">Loading admin dashboard...</div>
+  }
+
   return (
     <div className="space-y-10">
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        {metrics.map((metric) => (
-          <Card key={metric.label} className="border-white/10 bg-white/5 text-white">
-            <CardHeader className="pb-2">
-              <p className="text-xs uppercase tracking-[0.3em] text-primary/80">{metric.label}</p>
-            </CardHeader>
-            <CardContent>
-              <CardTitle className="text-3xl font-semibold">{metric.value}</CardTitle>
-              <p className="text-sm text-white/70">{metric.change}</p>
-            </CardContent>
-          </Card>
-        ))}
-      </section>
+      <div>
+        <h2 className="text-3xl font-bold tracking-tight text-white grid gap-1">Admin Dashboard</h2>
+        <p className="text-muted-foreground">System overview and user management.</p>
+      </div>
+
+      <AdminAnalyticsCards userCount={userCount} />
+
       <section className="grid gap-6 lg:grid-cols-2">
+        <DemandingJobsChart data={jobStats} />
         <Card className="border-white/10 bg-white/5 text-white">
           <CardHeader>
             <CardTitle>Platform health</CardTitle>
@@ -37,9 +73,9 @@ export default function AdminOverviewPage() {
             <CardTitle>Moderation queue</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm text-white/80">
-            <p>• 3 interview reports flagged for review</p>
-            <p>• 1 resume template awaiting approval</p>
-            <p>• 2 partner accounts pending verification</p>
+            <p>• 0 interview reports flagged for review</p>
+            <p>• 0 resume templates awaiting approval</p>
+            <p>• 0 partner accounts pending verification</p>
           </CardContent>
         </Card>
       </section>
