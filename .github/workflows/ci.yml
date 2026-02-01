@@ -1,0 +1,44 @@
+name: CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+        cache: 'npm'
+
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run Lint
+      run: npm run lint
+
+    - name: Build Application
+      run: npm run build
+      env:
+        # Dummy values for build-time validation if configured
+        NEXT_PUBLIC_VAPI_WEB_TOKEN: "dummy"
+        NEXT_PUBLIC_VAPI_WORKFLOW_ID: "dummy"
+        NEXT_PUBLIC_VAPI_ASSISTANT_ID: "dummy"
+        GOOGLE_GENERATIVE_AI_API_KEY: "dummy"
+        SMTP_USER: "dummy"
+        SMTP_PASS: "dummy"
+        SMTP_HOST: "dummy"
+        SMTP_PORT: "587"
+        FIREBASE_PROJECT_ID: "dummy"
+        FIREBASE_CLIENT_EMAIL: "dummy@example.com"
+        FIREBASE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0\n-----END PRIVATE KEY-----\n"
