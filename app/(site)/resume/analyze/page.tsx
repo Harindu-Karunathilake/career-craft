@@ -1,4 +1,4 @@
-"use client";
+"use client"
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
@@ -15,6 +15,7 @@ import { doc, setDoc, collection } from "firebase/firestore"
 import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
+import { motion } from "framer-motion"
 
 export default function ResumeAnalyzePage() {
   const { auth, isLoading: isPuterLoading, fs, ai, init } = usePuterStore();
@@ -168,99 +169,135 @@ export default function ResumeAnalyzePage() {
   return (
     <main className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-black font-sans py-20">
       {/* Background Effects */}
-      <div
-        className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[radial-gradient(circle_at_center,rgba(59,130,246,0.15),transparent_70%)]"
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.15),transparent_50%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(168,85,247,0.1),transparent_50%)]" />
       
-      <div className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-8 px-6">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.6 }}
+        className="relative z-10 flex w-full max-w-3xl flex-col items-center gap-8 px-6"
+      >
         
         {/* Header */}
-        <div className="text-center space-y-2">
-            <h1 className="text-3xl font-semibold text-white tracking-tight">Resume Analysis</h1>
-            <p className="text-muted-foreground">Upload your resume to get AI-powered feedback.</p>
+        <div className="text-center space-y-4">
+            <motion.h1 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="text-4xl font-bold tracking-tight text-white sm:text-5xl"
+            >
+                Resume Analysis
+            </motion.h1>
+            <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="text-lg text-white/60"
+            >
+                Upload your resume to get AI-powered feedback.
+            </motion.p>
         </div>
 
         {/* Upload Card */}
-        <Card className="w-full overflow-hidden border-white/10 bg-white/5 backdrop-blur-xl">
-             
-             {/* Job Details Form */}
-             <div className="p-6 pb-0 space-y-6">
-                <div className="grid gap-6 md:grid-cols-2">
-                    <div className="space-y-2">
-                        <Label htmlFor="job-title" className="text-white">Job Title</Label>
-                        <Input 
-                            id="job-title" 
-                            placeholder="e.g. Senior Product Manager" 
-                            className="bg-black/20 border-white/10 text-white placeholder:text-white/30"
-                            value={jobTitle}
-                            onChange={(e) => setJobTitle(e.target.value)}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label htmlFor="company" className="text-white">Company Name</Label>
-                        <Input 
-                            id="company" 
-                            placeholder="e.g. Google" 
-                            className="bg-black/20 border-white/10 text-white placeholder:text-white/30"
-                            value={companyName}
-                            onChange={(e) => setCompanyName(e.target.value)}
-                        />
-                    </div>
-                </div>
-                
-                <div className="space-y-2">
-                    <Label htmlFor="description" className="text-white">Job Description</Label>
-                    <Textarea 
-                        id="description" 
-                        placeholder="Paste the job description here..." 
-                        className="min-h-[100px] bg-black/20 border-white/10 text-white placeholder:text-white/30 resize-none"
-                        value={jobDescription}
-                        onChange={(e) => setJobDescription(e.target.value)}
-                    />
-                </div>
-             </div>
-
-             <div 
-                className="p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-xl bg-black/20 m-6 transition-all hover:border-primary/50 hover:bg-white/5 group cursor-pointer relative"
-                onDragOver={handleDragOver}
-                onDrop={handleDrop}
-             >
-                <div className="h-16 w-16 mb-4 rounded-full bg-indigo-500/20 flex items-center justify-center transition-transform group-hover:scale-110">
-                    <UploadCloud className="h-8 w-8 text-indigo-400" />
-                </div>
-                <h3 className="text-lg font-medium text-white mb-2">
-                    {file ? "File selected" : "Click to upload or drag and drop"}
-                </h3>
-                <p className="text-sm text-muted-foreground text-center max-w-xs">
-                    {file ? file.name : "PDF, DOCX up to 10MB. We will analyze your resume for keywords, formatting, and impact."}
-                </p>
-                <Input 
-                    type="file" 
-                    className="absolute inset-0 h-full w-full opacity-0 cursor-pointer" 
-                    accept=".pdf,.docx"
-                    onChange={handleFileChange}
-                />
-             </div>
-
-             {file && (
-                 <div className="px-6 pb-6 space-y-4">
-                    <div className="flex items-center gap-4 p-4 rounded-lg bg-white/5 border border-white/10">
-                        <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-blue-500/20">
-                            <FileText className="h-5 w-5 text-blue-400" />
+        <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            className="w-full"
+        >
+            <Card className="w-full overflow-hidden border-white/10 bg-white/5 backdrop-blur-xl">
+                 
+                 {/* Job Details Form */}
+                 <div className="p-6 pb-0 space-y-6">
+                    <div className="grid gap-6 md:grid-cols-2">
+                        <div className="space-y-2">
+                            <Label htmlFor="job-title" className="text-white">Job Title</Label>
+                            <Input 
+                                id="job-title" 
+                                placeholder="e.g. Senior Product Manager" 
+                                className="bg-black/20 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-indigo-500/50"
+                                value={jobTitle}
+                                onChange={(e) => setJobTitle(e.target.value)}
+                            />
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium text-white truncate">{file.name}</p>
-                            <p className="text-xs text-muted-foreground">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                        <div className="space-y-2">
+                            <Label htmlFor="company" className="text-white">Company Name</Label>
+                            <Input 
+                                id="company" 
+                                placeholder="e.g. Google" 
+                                className="bg-black/20 border-white/10 text-white placeholder:text-white/30 focus-visible:ring-indigo-500/50"
+                                value={companyName}
+                                onChange={(e) => setCompanyName(e.target.value)}
+                            />
                         </div>
-                        <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <Label htmlFor="description" className="text-white">Job Description</Label>
+                        <Textarea 
+                            id="description" 
+                            placeholder="Paste the job description here..." 
+                            className="min-h-[100px] bg-black/20 border-white/10 text-white placeholder:text-white/30 resize-none focus-visible:ring-indigo-500/50"
+                            value={jobDescription}
+                            onChange={(e) => setJobDescription(e.target.value)}
+                        />
                     </div>
                  </div>
-             )}
-        </Card>
+
+                 <div 
+                    className="p-10 flex flex-col items-center justify-center border-2 border-dashed border-white/10 rounded-xl bg-black/20 m-6 transition-all hover:border-indigo-500/50 hover:bg-indigo-500/5 group cursor-pointer relative"
+                    onDragOver={handleDragOver}
+                    onDrop={handleDrop}
+                 >
+                    <motion.div 
+                        whileHover={{ scale: 1.1, rotate: 5 }}
+                        className="h-16 w-16 mb-4 rounded-full bg-indigo-500/20 flex items-center justify-center transition-colors group-hover:bg-indigo-500/30"
+                    >
+                        <UploadCloud className="h-8 w-8 text-indigo-400" />
+                    </motion.div>
+                    <h3 className="text-lg font-medium text-white mb-2">
+                        {file ? "File selected" : "Click to upload or drag and drop"}
+                    </h3>
+                    <p className="text-sm text-white/40 text-center max-w-xs">
+                        {file ? file.name : "PDF, DOCX up to 10MB. We will analyze your resume for keywords, formatting, and impact."}
+                    </p>
+                    <Input 
+                        type="file" 
+                        className="absolute inset-0 h-full w-full opacity-0 cursor-pointer" 
+                        accept=".pdf,.docx"
+                        onChange={handleFileChange}
+                    />
+                 </div>
+
+                 {file && (
+                     <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="px-6 pb-6 space-y-4"
+                     >
+                        <div className="flex items-center gap-4 p-4 rounded-lg bg-white/5 border border-white/10">
+                            <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-indigo-500/20">
+                                <FileText className="h-5 w-5 text-indigo-400" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-white truncate">{file.name}</p>
+                                <p className="text-xs text-white/40">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </div>
+                            <CheckCircle2 className="h-5 w-5 text-emerald-500" />
+                        </div>
+                     </motion.div>
+                 )}
+            </Card>
+        </motion.div>
 
         {/* Action Button */}
-        <div className="w-full flex flex-col items-center gap-4">
+        <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
+            className="w-full flex flex-col items-center gap-4"
+        >
             <Button 
                 size="lg" 
                 className="h-12 min-w-[200px] rounded-full bg-indigo-600 text-base font-medium text-white shadow-[0_0_20px_-5px_rgba(79,70,229,0.5)] transition-all hover:bg-indigo-500 hover:shadow-[0_0_30px_-5px_rgba(79,70,229,0.6)] disabled:opacity-50 disabled:cursor-not-allowed"
@@ -280,19 +317,23 @@ export default function ResumeAnalyzePage() {
             </Button>
             
             {statusText && (
-                <p className={`text-sm ${statusText.startsWith("Error") ? "text-red-400" : "text-indigo-300"} animate-pulse`}>
+                <motion.p 
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className={`text-sm ${statusText.startsWith("Error") ? "text-red-400" : "text-indigo-300"} animate-pulse`}
+                >
                     {statusText}
-                </p>
+                </motion.p>
             )}
 
             {!auth.isAuthenticated && (
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-white/40">
                     Note: Analysis is powered by Puter.js and requires a separate sign-in.
                 </p>
             )}
-        </div>
+        </motion.div>
 
-      </div>
+      </motion.div>
     </main>
   )
 }

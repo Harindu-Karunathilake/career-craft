@@ -12,7 +12,7 @@ export async function POST(request: Request) {
         const body = await request.json()
         const { email } = forgotPasswordSchema.parse(body)
 
-        const link = await adminAuth.generatePasswordResetLink(email)
+        const link = await adminAuth().generatePasswordResetLink(email)
 
         const result = await sendEmail({
             to: email,

@@ -12,6 +12,7 @@ import { generateFeedbackAction } from "@/lib/actions/feedback"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore"
 import { cn } from "@/lib/utils"
+import { motion } from "framer-motion"
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
