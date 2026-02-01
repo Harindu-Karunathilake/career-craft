@@ -39,9 +39,37 @@ function InterviewContent() {
     const [lastMessage, setLastMessage] = useState<string>("");
     const [isMuted, setIsMuted] = useState(false);
 
+    const startCall = async () => {
+        const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
+        if (!token) {
+            console.error("Missing NEXT_PUBLIC_VAPI_WEB_TOKEN");
+            alert("Configuration Error: Missing Vapi Web Token. Please check your .env file.");
+            return;
+        }
+
+        setCallStatus(CallStatus.CONNECTING);
+        try {
+            console.log("Starting Vapi call with token:", token.slice(0, 5) + "...");
+            await vapi.start(interviewer);
+        } catch (err: any) {
+            console.error("Failed to start call", err);
+            console.error("Error details:", JSON.stringify(err, null, 2));
+            alert(`Failed to start interview: ${err.message || JSON.stringify(err)}`);
+            setCallStatus(CallStatus.INACTIVE);
+        }
+    };
+
+    const endCall = async () => {
+        vapi.stop();
+        setCallStatus(CallStatus.FINISHED);
+        await handleGenerateFeedback();
+    };
+
     useEffect(() => {
         // Auto-start call on mount
-        startCall();
+        const timer = setTimeout(() => {
+            startCall();
+        }, 0);
         
         const onCallStart = () => setCallStatus(CallStatus.ACTIVE);
         const onCallEnd = () => setCallStatus(CallStatus.FINISHED);
@@ -71,31 +99,7 @@ function InterviewContent() {
         };
     }, []);
 
-    const startCall = async () => {
-        const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
-        if (!token) {
-            console.error("Missing NEXT_PUBLIC_VAPI_WEB_TOKEN");
-            alert("Configuration Error: Missing Vapi Web Token. Please check your .env file.");
-            return;
-        }
 
-        setCallStatus(CallStatus.CONNECTING);
-        try {
-            console.log("Starting Vapi call with token:", token.slice(0, 5) + "...");
-            await vapi.start(interviewer);
-        } catch (err: any) {
-            console.error("Failed to start call", err);
-            console.error("Error details:", JSON.stringify(err, null, 2));
-            alert(`Failed to start interview: ${err.message || JSON.stringify(err)}`);
-            setCallStatus(CallStatus.INACTIVE);
-        }
-    };
-
-    const endCall = async () => {
-        vapi.stop();
-        setCallStatus(CallStatus.FINISHED);
-        await handleGenerateFeedback();
-    };
 
     const toggleMute = () => {
         const newMutedState = !isMuted;
