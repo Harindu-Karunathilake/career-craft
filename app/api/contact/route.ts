@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
         }
 
         // 1. Save to Firestore
-        const docRef = await adminDb.collection("contact_messages").add({
+        const docRef = await adminDb().collection("contact_messages").add({
             name,
             email,
             topic,
