@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Bot, PhoneOff, Mic, MicOff } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { vapi } from "@/lib/vapi.sdk"
 import { interviewer } from "@/constants/interview"
@@ -25,7 +25,7 @@ interface SavedMessage {
   content: string;
 }
 
-export default function ActiveInterviewPage() {
+function InterviewContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const role = searchParams.get("role") || "Software Engineer";
@@ -217,4 +217,12 @@ export default function ActiveInterviewPage() {
             </div>
         </main>
     );
+}
+
+export default function ActiveInterviewPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen w-full items-center justify-center text-white">Loading interview...</div>}>
+      <InterviewContent />
+    </Suspense>
+  )
 }

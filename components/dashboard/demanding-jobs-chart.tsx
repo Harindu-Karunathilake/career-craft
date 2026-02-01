@@ -28,14 +28,16 @@ export function DemandingJobsChart({ data }: DemandingJobsChartProps) {
                 fill="#8884d8"
                 dataKey="count"
                 nameKey="role"
-                label={({ cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                label={({cx, cy, midAngle, innerRadius, outerRadius, percent }) => {
+                    const angle = midAngle ?? 0;
+                    const p = percent ?? 0;
                     const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
-                    const x = cx + radius * Math.cos(-midAngle * Math.PI / 180);
-                    const y = cy + radius * Math.sin(-midAngle * Math.PI / 180);
+                    const x = cx + radius * Math.cos(-angle * Math.PI / 180);
+                    const y = cy + radius * Math.sin(-angle * Math.PI / 180);
                   
-                    return percent > 0.05 ? (
+                    return p > 0.05 ? (
                       <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central">
-                        {`${(percent * 100).toFixed(0)}%`}
+                        {`${(p * 100).toFixed(0)}%`}
                       </text>
                     ) : null;
                   }}
