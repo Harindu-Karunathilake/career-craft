@@ -18,6 +18,7 @@ export default function ResumeResultPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [displayImageUrl, setDisplayImageUrl] = useState<string>("");
 
   useEffect(() => {
     const fetchData = async () => {
@@ -31,7 +32,31 @@ export default function ResumeResultPage() {
                      const docSnap = await getDoc(docRef);
                      
                      if (docSnap.exists()) {
-                         setData(docSnap.data());
+                         const resumeData = docSnap.data();
+                         setData(resumeData);
+
+                         // Handle Image URL (Encrypted vs Public)
+                         if (resumeData.isEncrypted && resumeData.imageUrl) {
+                             try {
+                                 const token = await user.getIdToken();
+                                 const res = await fetch(`/api/resumes/${id}/download?target=preview`, {
+                                     headers: { "Authorization": `Bearer ${token}` }
+                                 });
+                                 if (res.ok) {
+                                     const blob = await res.blob();
+                                     const objUrl = URL.createObjectURL(blob);
+                                     setDisplayImageUrl(objUrl);
+                                 } else {
+                                     const errText = await res.text();
+                                     console.error("Failed to load encrypted preview:", res.status, errText);
+                                 }
+                             } catch (e) {
+                                 console.error("Error loading preview:", e);
+                             }
+                         } else {
+                             // Legacy or public
+                             setDisplayImageUrl(resumeData.imageUrl);
+                         }
                      } else {
                          setError("Resume analysis not found.");
                      }
@@ -49,6 +74,15 @@ export default function ResumeResultPage() {
     };
     fetchData();
   }, [id]);
+
+  // Cleanup object URL
+  useEffect(() => {
+      return () => {
+          if (displayImageUrl && displayImageUrl.startsWith("blob:")) {
+              URL.revokeObjectURL(displayImageUrl);
+          }
+      }
+  }, [displayImageUrl]);
 
   if (loading) return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white">
@@ -108,10 +142,10 @@ export default function ResumeResultPage() {
             <motion.div variants={itemVariants} className="space-y-6">
                  <div className="bg-white/5 border border-white/10 rounded-2xl p-4 md:p-8 h-[calc(100vh-12rem)] sticky top-24 overflow-auto scrollbar-thin scrollbar-thumb-white/20 backdrop-blur-sm">
                     <h2 className="text-xl font-semibold mb-4 text-white/80">Analyzed Resume</h2>
-                    {imageUrl ? (
+                    {displayImageUrl ? (
                         <div className="relative w-full h-full min-h-[500px]">
                             <Image 
-                                src={imageUrl} 
+                                src={displayImageUrl} 
                                 alt="Resume Preview" 
                                 width={800} 
                                 height={1000}

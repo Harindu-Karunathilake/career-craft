@@ -151,7 +151,7 @@ export function BlogCardsSection() {
     }
 
 	return (
-		<section className="relative isolate w-full min-h-screen bg-black px-6 py-24 text-white sm:px-10 overflow-hidden">
+		<section className="relative isolate w-full min-h-screen px-6 py-24 text-white sm:px-10 overflow-hidden">
 			<div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(8,145,178,0.15),transparent_65%)]" />
             <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(124,58,237,0.1),transparent_50%)]" />
 
