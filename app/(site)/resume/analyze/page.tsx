@@ -101,19 +101,39 @@ export default function ResumeAnalyzePage() {
             throw new Error(`Failed to convert PDF: ${imageResult.error}`);
         }
 
-        // 3. Upload to Firebase Storage (Long term retention)
-        setStatusText("Saving documents...");
-        const timestamp = Date.now();
-        const resumeRef = ref(storage, `resumes/${userId}/${timestamp}_${file.name}`);
-        const imageRef = ref(storage, `resumes/${userId}/${timestamp}_preview.png`);
+        // 3. Upload to Firebase Storage (via Encrypted API)
+        setStatusText("Encrypting and saving documents...");
+        
+        const uploadFile = async (fileToUpload: File) => {
+            const formData = new FormData();
+            formData.append("file", fileToUpload);
+            
+            // Get current auth token
+            const token = await currentUser.getIdToken();
+            
+            const res = await fetch("/api/resumes/upload", {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${token}`
+                },
+                body: formData
+            });
+            
+            if (!res.ok) {
+                const errorText = await res.text();
+                console.error("Upload API Error:", res.status, errorText);
+                throw new Error(`Upload failed: ${res.status} ${errorText}`);
+            }
+            return res.json();
+        };
 
-        const [resumeSnapshot, imageSnapshot] = await Promise.all([
-            uploadBytes(resumeRef, file),
-            uploadBytes(imageRef, imageResult.file)
+        const [resumeUpload, imageUpload] = await Promise.all([
+            uploadFile(file),
+            uploadFile(imageResult.file)
         ]);
 
-        const resumeUrl = await getDownloadURL(resumeSnapshot.ref);
-        const imageUrl = await getDownloadURL(imageSnapshot.ref);
+        const resumeUrl = resumeUpload.storagePath; // Stores path, not URL
+        const imageUrl = imageUpload.storagePath;
 
         // 4. Run AI Analysis
         setStatusText("Analyzing content against job description...");
@@ -144,14 +164,17 @@ export default function ResumeAnalyzePage() {
         setStatusText("Finalizing results...");
         const resumeId = doc(collection(firebaseDb, "users", userId, "resumes")).id;
         
+        console.log("Saving to Firestore:", { resumeUrl, imageUrl });
+
         await setDoc(doc(firebaseDb, "users", userId, "resumes", resumeId), {
             id: resumeId,
             companyName,
             jobTitle,
             jobDescription,
-            resumeUrl,
             imageUrl,
+            resumeUrl,
             analysis: analysisData,
+            isEncrypted: true, // Flag new encryption
             createdAt: new Date().toISOString(),
         });
 
