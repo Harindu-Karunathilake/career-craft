@@ -29,7 +29,7 @@ const itemVariants: Variants = {
 
 export function WhyChooseUsSection() {
   return (
-    <section id="why-choose-us" className="relative isolate w-full py-24 bg-zinc-950">
+    <section id="why-choose-us" className="relative isolate w-full py-24">
       <div
         className="pointer-events-none absolute inset-y-0 left-1/2 h-[120%] w-[140%] -translate-x-1/2 bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.15),transparent_70%)]"
         aria-hidden="true"

@@ -5,7 +5,7 @@ import React from 'react'
 
 const page = () => {
   return (
-     <div className="flex min-h-screen flex-col bg-black font-sans">
+     <div className="flex min-h-screen flex-col font-sans">
         <GetStarted />
         <InterviewHowItWorks />
         <PublishedInterviews />

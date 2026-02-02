@@ -57,7 +57,7 @@ export function ContactSection() {
   }
 
   return (
-    <section id="contact" className="relative isolate w-full bg-black px-6 py-24 text-white sm:px-10 overflow-hidden">
+    <section id="contact" className="relative isolate w-full px-6 py-24 text-white sm:px-10 overflow-hidden">
       <div
         className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.15),transparent_60%)]"
         aria-hidden="true"

@@ -13,7 +13,7 @@ const footerLinks = [
 
 export function SiteFooter() {
   return (
-    <footer className="bg-muted/30 border-t px-6 pb-10 pt-16 text-muted-foreground sm:px-10">
+    <footer className="bg-black border-t border-white/20 relative z-50 px-6 pb-10 pt-16 text-muted-foreground sm:px-10">
       <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
         <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
           <div className="space-y-2">
