@@ -7,7 +7,7 @@ interface DemandingJobsChartProps {
   data: { role: string; count: number }[]
 }
 
-const COLORS = ["#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe", "#dbeafe"]
+const COLORS = ["#f97316", "#fb923c", "#fdba74", "#fed7aa", "#ffedd5"]
 
 export function DemandingJobsChart({ data }: DemandingJobsChartProps) {
   return (

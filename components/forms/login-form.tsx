@@ -86,6 +86,8 @@ function LoginForm() {
         const role = (userData?.role as string | undefined) ?? "user"
         if (role === "admin") {
           destination = "/admin"
+        } else if (role === "tutor") {
+          destination = "/tutor"
         }
       } catch (roleError) {
         console.error("Failed to resolve user role", roleError)
