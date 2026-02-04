@@ -13,8 +13,19 @@ import {
 
 import { Menu } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
+import { useAuth } from "@/hooks/use-auth"
 
 export function SiteNavbar() {
+  const { profile } = useAuth()
+
+  const getDashboardUrl = () => {
+    if (profile?.role === "tutor") return "/tutor"
+    if (profile?.role === "admin") return "/admin"
+    return "/user"
+  }
+
+  const dashboardUrl = getDashboardUrl()
+
   return (
     <motion.header 
       initial={{ y: -20, opacity: 0 }}
@@ -46,7 +57,7 @@ export function SiteNavbar() {
 
       <div className="flex items-center gap-4">
         <Button asChild size="sm" className="hidden md:flex min-w-24 bg-white text-black hover:bg-zinc-200">
-            <Link href="/user">Dashboard</Link>
+            <Link href={dashboardUrl}>Dashboard</Link>
         </Button>
 
         {/* Mobile Menu */}
@@ -73,7 +84,7 @@ export function SiteNavbar() {
                         Blog
                     </Link>
                     <div className="h-px bg-white/10 my-2" />
-                    <Link href="/user" className="flex items-center py-2 text-lg font-medium text-white">
+                    <Link href={dashboardUrl} className="flex items-center py-2 text-lg font-medium text-white">
                         Dashboard
                     </Link>
                 </nav>

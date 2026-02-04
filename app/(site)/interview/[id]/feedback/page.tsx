@@ -1,25 +1,49 @@
 "use client";
 
 import { useEffect, useState } from "react"
-import { useParams, useRouter } from "next/navigation"
+import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { doc, getDoc } from "firebase/firestore"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { ArrowRight, CheckCircle, AlertTriangle, BarChart3, Calendar } from "lucide-react"
+import { ArrowRight, CheckCircle, AlertTriangle, BarChart3 } from "lucide-react"
 
 import { motion } from "framer-motion"
 
 export default function InterviewFeedbackPage() {
     const { id } = useParams();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const [feedback, setFeedback] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+    const [dashboardLink, setDashboardLink] = useState('/user/interviews');
+
+    useEffect(() => {
+        const unsubscribe = firebaseAuth.onAuthStateChanged(async (user) => {
+            if (user) {
+                try {
+                     const userDoc = await getDoc(doc(firebaseDb, "users", user.uid));
+                     const userData = userDoc.data();
+                     // Default is already /user/interviews, only change if tutor
+                     if (userData?.role === 'tutor') {
+                         setDashboardLink('/tutor');
+                     }
+                } catch (e) {
+                    console.error("Error fetching user role for navigation", e);
+                }
+            }
+        });
+        return () => unsubscribe();
+    }, []);
 
     useEffect(() => {
         const fetchFeedback = async () => {
-            const userId = firebaseAuth.currentUser?.uid;
+             // Retrieve userId from query params (if viewing another user's interview)
+             // or fallback to current user (if viewing own)
+            const paramUserId = searchParams.get('uid');
+            const currentUser = firebaseAuth.currentUser;
+            const userId = paramUserId || currentUser?.uid;
+
             if (!userId || !id) return;
 
             try {
@@ -38,13 +62,19 @@ export default function InterviewFeedbackPage() {
             }
         };
 
-        // Wait for auth
-        const unsub = firebaseAuth.onAuthStateChanged((user) => {
-            if (user) fetchFeedback();
-            else setLoading(false);
-        });
-        return () => unsub();
-    }, [id]);
+        // If we have a uid param, we don't strictly need to wait for auth state 
+        // (unless we want to enforce login to view public interviews, but typically public is public)
+        if (searchParams.get('uid')) {
+            fetchFeedback();
+        } else {
+             // Wait for auth if no uid param
+            const unsub = firebaseAuth.onAuthStateChanged((user) => {
+                if (user) fetchFeedback();
+                else setLoading(false);
+            });
+            return () => unsub();
+        }
+    }, [id, searchParams]);
 
     if (loading) return (
         <div className="min-h-screen bg-black flex items-center justify-center text-white">
@@ -180,7 +210,7 @@ export default function InterviewFeedbackPage() {
                 </motion.div>
 
                 <motion.div variants={itemVariants} className="flex justify-center gap-4 pt-4">
-                    <Button variant="outline" className="border-white/10 bg-transparent hover:bg-white/10 text-white" onClick={() => router.push('/user/interviews')}>
+                    <Button variant="outline" className="border-white/10 bg-transparent hover:bg-white/10 text-white" onClick={() => router.push(dashboardLink)}>
                         View History
                     </Button>
                     <Button className="bg-emerald-600 hover:bg-emerald-500 text-white transition-all hover:scale-105 shadow-lg shadow-emerald-900/20" onClick={() => router.push('/interview/setup')}>

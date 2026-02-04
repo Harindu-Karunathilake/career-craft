@@ -1,6 +1,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
-import { adminAuth, adminStorage, adminDb } from "@/lib/firebase-admin";
+import { adminAuth, adminStorage } from "@/lib/firebase-admin";
 import { encryptBuffer } from "@/lib/encryption-server";
 
 export async function POST(req: NextRequest) {

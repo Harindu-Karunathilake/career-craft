@@ -12,7 +12,6 @@ import { generateFeedbackAction } from "@/lib/actions/feedback"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
 import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore"
 import { cn } from "@/lib/utils"
-import { motion } from "framer-motion"
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
@@ -94,7 +93,14 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
 
         const onSpeechStart = () => setIsSpeaking(true);
         const onSpeechEnd = () => setIsSpeaking(false);
-        const onError = (error: Error) => console.error("Vapi Error:", error);
+        const onError = (error: any) => {
+            console.error("Vapi Error RAW:", error);
+            try {
+                console.error("Vapi Error JSON:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
+            } catch (e) {
+                console.error("Could not stringify error");
+            }
+        };
 
         vapi.on("call-start", onCallStart);
         vapi.on("call-end", onCallEnd);
@@ -104,7 +110,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
         vapi.on("error", onError);
 
         return () => {
-            // vapi.stop(); // Don't stop on unmount immediately if navigating? actually yes cleanup.
+            vapi.stop(); 
             vapi.removeAllListeners();
         };
     }, []);
@@ -112,12 +118,22 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
     const startCall = async (data: any) => {
         const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
         if (!token) {
+            console.error("Missing Vapi Web Token");
             alert("Configuration Error: Missing Vapi Web Token.");
+            return;
+        }
+
+        try {
+            await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (e) {
+            console.error("Microphone access denied:", e);
+            alert("Please allow microphone access to continue.");
             return;
         }
 
         setCallStatus(CallStatus.CONNECTING);
         try {
+            vapi.stop(); // Ensure any previous session is ended
             // Prepare dynamic interviewer object
             const questionsList = (data.questions || []).map((q: string, i: number) => `${i + 1}. ${q}`).join('\n');
             const modifiedInterviewer = {
@@ -136,7 +152,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
             await vapi.start(modifiedInterviewer);
         } catch (err: any) {
             console.error("Failed to start call", err);
-            alert(`Failed to start interview: ${err.message}`);
+            // alert(`Failed to start interview: ${err.message}`); // Only alert if not handled by onError
             setCallStatus(CallStatus.INACTIVE);
         }
     };

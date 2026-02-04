@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -25,28 +25,39 @@ import { Play, Loader2, Sparkles, LayoutDashboard } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { firebaseDb, firebaseAuth } from '@/lib/firebase';
 
-export default function InterviewSetupForm() {
+interface InterviewSetupFormProps {
+  initialRole?: string;
+  initialTopic?: string;
+  initialExperience?: string;
+  autoStart?: boolean;
+}
+
+export default function InterviewSetupForm({
+  initialRole = '',
+  initialTopic = '',
+  initialExperience = '',
+  autoStart = false
+}: InterviewSetupFormProps) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [generatedInterviewId, setGeneratedInterviewId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    role: '',
-    experience: '',
-    topic: '',
+    role: initialRole,
+    experience: initialExperience,
+    topic: initialTopic,
     type: 'Technical',
     questionCount: '5',
   });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const createInterview = useCallback(async (isAutoStart: boolean = false) => {
     if (!formData.role || !formData.experience) return;
 
     const userId = firebaseAuth.currentUser?.uid;
-    if (!userId) {
-        alert("Please log in to start an interview.");
-        // router.push('/login'); // Optional: Redirect
-        return;
+    // If auto-start and no user, we can't proceed. Ideally we'd redirect to login but for now alert/return
+    if (!userId) { 
+        if (!isAutoStart) alert("Please log in to start an interview.");
+        return; 
     }
 
     setIsLoading(true);
@@ -82,18 +93,44 @@ export default function InterviewSetupForm() {
             questions: questions,
             status: "pending", // pending, completed
             createdAt: serverTimestamp(),
-            interviewType: "Simulated" // Kept original 'type' field name as interviewType to avoid conflict if needed, or just type. User code had type: "Simulated". I should probably update that to be dynamic or keep it "Simulated" and add a new field. The user said "field where user can select", so let's store it as 'category' or 'interviewType'. The existing 'type' was "Simulated". I'll store the new one as 'category' to avoid breaking existing logic if 'type' is used for something else, but looking at code it seems safely just a string. Actually the existing code has `type: "Simulated"`. I will leave that and add `category: formData.type`.
+            interviewType: "Simulated" 
         });
 
         setGeneratedInterviewId(docRef.id);
-        setShowSuccessDialog(true);
+        
+        if (isAutoStart) {
+             router.push(`/interview/${docRef.id}`);
+        } else {
+             setShowSuccessDialog(true);
+        }
 
     } catch (error) {
         console.error("Setup Error:", error);
-        alert(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+        if (!isAutoStart) alert(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     } finally {
         setIsLoading(false);
     }
+  }, [formData, router]);
+
+  useEffect(() => {
+      // Auto-start logic
+      if (autoStart && formData.role && formData.experience) {
+          // Add a small delay or check auth availability
+          const checkAuthAndStart = () => {
+              const unsubscribe = firebaseAuth.onAuthStateChanged((user) => {
+                  if (user) {
+                      createInterview(true);
+                  }
+                  unsubscribe();
+              });
+          };
+          checkAuthAndStart();
+      }
+  }, [autoStart, createInterview, formData.role, formData.experience]);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createInterview(false);
   };
 
   const handleStartNow = () => {

@@ -6,7 +6,6 @@ import { getFirestore } from 'firebase-admin/firestore';
 import { getStorage } from 'firebase-admin/storage';
 
 // CONFIGURATION
-const SERVICE_ACCOUNT = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '{}');
 // OR user might need to point to a file. 
 // For this script, let's assume environment variables are set or we use applicationDefault() if running locally with Google Cloud SDK.
 // But usually users have a service-account.json.

@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { ArrowLeft, CheckCircle, AlertCircle, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
@@ -100,7 +99,7 @@ export default function ResumeResultPage() {
       </div>
   );
   
-  const { analysis, imageUrl, companyName, jobTitle } = data;
+  const { analysis, companyName, jobTitle } = data;
 
   const containerVariants: any = {
       hidden: { opacity: 0 },

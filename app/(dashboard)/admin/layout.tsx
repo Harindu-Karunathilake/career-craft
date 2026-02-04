@@ -10,7 +10,21 @@ export default function AdminDashboardLayout({
   children: ReactNode
 }) {
   return (
-    <SidebarProvider>
+    <SidebarProvider className="admin-dashboard-theme">
+      <style dangerouslySetInnerHTML={{ __html: `
+        .admin-dashboard-theme {
+          --primary: oklch(0.623 0.17 40);
+          --ring: oklch(0.623 0.17 40);
+          --sidebar-primary: oklch(0.623 0.17 40);
+          --sidebar-ring: oklch(0.623 0.17 40);
+        }
+        .dark .admin-dashboard-theme {
+          --primary: oklch(0.623 0.17 40);
+          --ring: oklch(0.623 0.17 40);
+          --sidebar-primary: oklch(0.623 0.17 40);
+          --sidebar-ring: oklch(0.623 0.17 40);
+        }
+      `}} />
       <AdminSidebar />
       <SidebarInset className="bg-black text-white">
         <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-6 py-4">

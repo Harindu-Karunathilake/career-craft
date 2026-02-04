@@ -19,7 +19,7 @@ function getKey() {
 
 export async function encryptBuffer(buffer: Buffer): Promise<Buffer> {
     const key = getKey();
-    const iv = crypto.randomBytes(16); // 96-bit IV is standard for GCM, but 128-bit (16 bytes) is also fine? standard is 12 bytes (96 bits), let's stick to 16 if safe or 12. Node docs say 12 is recommended for GCM.
+    // 96-bit IV is standard for GCM, but 128-bit (16 bytes) is also fine? standard is 12 bytes (96 bits), let's stick to 16 if safe or 12. Node docs say 12 is recommended for GCM.
     // Actually, for GCM, 12 bytes is recommended.
     const iv12 = crypto.randomBytes(12);
 

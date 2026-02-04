@@ -2,9 +2,10 @@ import { getApps, initializeApp, type FirebaseOptions, getApp } from "firebase/a
 import { getAuth } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
 import { getAnalytics, isSupported } from "firebase/analytics"
+import { getStorage } from "firebase/storage"
 
 const firebaseConfig: FirebaseOptions = {
-   apiKey: "AIzaSyA5dj46p-l1TCthL3JGOpou9QU1FiZc7uM",
+  apiKey: "AIzaSyA5dj46p-l1TCthL3JGOpou9QU1FiZc7uM",
   authDomain: "career-craft-ac840.firebaseapp.com",
   projectId: "career-craft-ac840",
   storageBucket: "career-craft-ac840.firebasestorage.app",
@@ -21,7 +22,7 @@ function ensureConfigValues(config: FirebaseOptions) {
   if (missing.length) {
     throw new Error(
       `Missing Firebase configuration values: ${missing.join(", ")}\n` +
-        "Ensure these are defined in your .env file."
+      "Ensure these are defined in your .env file."
     )
   }
 }
@@ -51,6 +52,7 @@ function createFirebaseApp() {
 export const firebaseApp = createFirebaseApp()
 export const firebaseAuth = getAuth(firebaseApp)
 export const firebaseDb = getFirestore(firebaseApp)
+export const firebaseStorage = getStorage(firebaseApp)
 
 let analyticsPromise: ReturnType<typeof getAnalytics> | null = null
 if (typeof window !== "undefined") {

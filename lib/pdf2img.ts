@@ -6,7 +6,6 @@ export interface PdfConversionResult {
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let pdfjsLib: any = null;
-let isLoading = false;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 let loadPromise: Promise<any> | null = null;
 
@@ -15,13 +14,11 @@ async function loadPdfJs(): Promise<any> {
     if (pdfjsLib) return pdfjsLib;
     if (loadPromise) return loadPromise;
 
-    isLoading = true;
     // @ts-expect-error - pdfjs-dist matches the installed version but import path might vary slightly
     loadPromise = import("pdfjs-dist/build/pdf.mjs").then((lib) => {
         // Set the worker source to use local file
         lib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
         pdfjsLib = lib;
-        isLoading = false;
         return lib;
     });
 

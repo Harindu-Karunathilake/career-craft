@@ -4,7 +4,7 @@ import { useChat } from '@ai-sdk/react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, User, Send, Play } from 'lucide-react';
+import { Bot, Send, Play } from 'lucide-react';
 import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
@@ -28,12 +28,10 @@ export default function ChatInterface() {
   } = useChat({
     api: '/api/chat',
     maxSteps: 5,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onError: (error: any) => {
         console.error('Chat error:', error);
         alert('Failed to send message: ' + error.message);
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any) as any;
 
   // Derive interview config from messages
@@ -43,7 +41,6 @@ export default function ChatInterface() {
     
     if (lastMessage?.toolInvocations) {
         const toolInvocation = lastMessage.toolInvocations.find(
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             (tool: any) => tool.toolName === 'generateInterview' && 'result' in tool
         );
         if (toolInvocation && 'result' in toolInvocation) {

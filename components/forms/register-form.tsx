@@ -17,6 +17,13 @@ import {
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { firebaseAuth, firebaseDb } from "@/lib/firebase"
 
 function formatRegisterError(error: unknown) {
@@ -42,6 +49,7 @@ function RegisterForm() {
   const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [role, setRole] = useState("user")
   const [wantsUpdates, setWantsUpdates] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -68,7 +76,7 @@ function RegisterForm() {
           uid: credential.user.uid,
           name: trimmedName || credential.user.displayName || "",
           email: credential.user.email,
-          role: "user",
+          role,
           status: "active",
           wantsUpdates,
           createdAt: serverTimestamp(),
@@ -82,7 +90,7 @@ function RegisterForm() {
       }
 
       setIsSuccess(true)
-      router.push("/user")
+      router.push(role === "tutor" ? "/tutor" : "/user")
     } catch (err) {
       setError(formatRegisterError(err))
     } finally {
@@ -125,12 +133,12 @@ function RegisterForm() {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="register-email">Work email</Label>
+            <Label htmlFor="register-email">Email</Label>
             <Input
               id="register-email"
               name="email"
               type="email"
-              placeholder="you@company.com"
+              placeholder="name@example.com"
               required
               autoComplete="email"
               value={email}
@@ -153,6 +161,18 @@ function RegisterForm() {
               value={password}
               onChange={(event) => setPassword(event.target.value)}
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="register-role">I am a</Label>
+            <Select value={role} onValueChange={setRole}>
+              <SelectTrigger id="register-role">
+                <SelectValue placeholder="Select your role" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="user">Candidate</SelectItem>
+                <SelectItem value="tutor">Tutor</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <fieldset className="space-y-2 rounded-md border border-border/60 p-4 text-sm">
             <legend className="px-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">

@@ -7,12 +7,9 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { collection, query, orderBy, getDocs, deleteDoc, doc } from "firebase/firestore"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
-import { useRouter } from "next/navigation"
-
 export default function UserResumePage() {
     const [resumes, setResumes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const router = useRouter();
 
     useEffect(() => {
         const fetchResumes = async () => {
@@ -67,7 +64,7 @@ export default function UserResumePage() {
                     </p>
                 </div>
                 <Link href="/resume/analyze">
-                    <Button className="bg-indigo-600 hover:bg-indigo-700">
+                    <Button>
                         <Plus className="mr-2 h-4 w-4" /> New Analysis
                     </Button>
                 </Link>
@@ -77,15 +74,15 @@ export default function UserResumePage() {
                 <div className="text-white">Loading...</div>
             ) : resumes.length === 0 ? (
                 <Card className="flex flex-col items-center justify-center p-12 bg-white/5 border-dashed border-white/20">
-                    <div className="h-16 w-16 mb-4 rounded-full bg-indigo-500/10 flex items-center justify-center">
-                        <FileText className="h-8 w-8 text-indigo-400" />
+                    <div className="h-16 w-16 mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                        <FileText className="h-8 w-8 text-primary" />
                     </div>
                     <h3 className="text-xl font-medium text-white mb-2">No resumes analyzed yet</h3>
                     <p className="text-muted-foreground mb-6 text-center max-w-sm">
                         Upload your resume to get instant AI feedback on ATS compatibility, content, and structure.
                     </p>
                     <Link href="/resume/analyze">
-                        <Button variant="outline" className="border-indigo-500/50 text-indigo-400 hover:bg-indigo-500/10">
+                        <Button variant="outline" className="border-primary/50 text-primary hover:bg-primary/10">
                             Start First Analysis
                         </Button>
                     </Link>
@@ -96,8 +93,8 @@ export default function UserResumePage() {
                         <Link href={`/resume/${resume.id}`} key={resume.id}>
                             <Card className="bg-white/5 border-white/10 p-6 hover:bg-white/10 transition-all cursor-pointer group relative overflow-hidden">
                                 <div className="flex items-start justify-between mb-4">
-                                    <div className="h-10 w-10 rounded-lg bg-indigo-500/20 flex items-center justify-center">
-                                        <FileText className="h-5 w-5 text-indigo-400" />
+                                    <div className="h-10 w-10 rounded-lg bg-primary/20 flex items-center justify-center">
+                                        <FileText className="h-5 w-5 text-primary" />
                                     </div>
                                     <div className="text-2xl font-bold text-white">
                                         {resume.analysis?.overallScore || 0}
@@ -117,7 +114,7 @@ export default function UserResumePage() {
                                          <Button variant="ghost" size="icon" className="h-6 w-6 hover:text-red-400" onClick={(e) => handleDelete(e, resume.id)}>
                                             <Trash2 className="h-3 w-3" />
                                          </Button>
-                                         <ArrowRight className="h-4 w-4 bg-transparent group-hover:translate-x-1 transition-transform text-indigo-400" />
+                                         <ArrowRight className="h-4 w-4 bg-transparent group-hover:translate-x-1 transition-transform text-primary" />
                                     </div>
                                 </div>
                             </Card>
