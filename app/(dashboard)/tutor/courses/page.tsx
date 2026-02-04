@@ -16,6 +16,7 @@ interface Course {
     price: number;
     published: boolean;
     createdAt: any;
+    coverImage?: string;
 }
 
 export default function TutorCoursesPage() {
@@ -103,8 +104,17 @@ export default function TutorCoursesPage() {
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {courses.map((course) => (
                         <Card key={course.id} className="flex flex-col overflow-hidden bg-card text-card-foreground shadow-sm hover:shadow-md transition-all">
-                             <div className="aspect-video w-full bg-muted/20 flex items-center justify-center relative">
-                                <BookOpen className="h-10 w-10 text-muted-foreground/50" />
+                             <div className="aspect-video w-full bg-muted/20 flex items-center justify-center relative group">
+                                {course.coverImage ? (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img 
+                                        src={course.coverImage} 
+                                        alt={course.title} 
+                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                    />
+                                ) : (
+                                    <BookOpen className="h-10 w-10 text-muted-foreground/50" />
+                                )}
                                 <Badge className="absolute top-2 right-2 bg-background/80 backdrop-blur text-foreground border-none">
                                     {course.published ? "Published" : "Draft"}
                                 </Badge>
