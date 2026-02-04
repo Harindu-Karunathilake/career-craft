@@ -11,7 +11,6 @@ import { Loader2, Play, FileText, RefreshCw, Plus, Calendar, Globe } from "lucid
 import Link from "next/link";
 import { Interview } from "@/types";
 import { PublishInterviewDialog } from "@/components/dashboard/publish-interview-dialog";
-import { toast } from "sonner"; // Assuming sonner is used for toasts, if not standard usage
 
 export default function UserInterviewsPage() {
     const router = useRouter();

@@ -5,8 +5,9 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { firebaseDb, firebaseAuth } from "@/lib/firebase";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Plus, BookOpen, Clock, DollarSign, MoreVertical } from "lucide-react";
+import { Plus, BookOpen, Clock, DollarSign } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
@@ -117,11 +118,11 @@ export default function TutorCoursesPage() {
                         <Card key={course.id} className="flex flex-col overflow-hidden bg-card text-card-foreground shadow-sm hover:shadow-md transition-all">
                              <div className="aspect-video w-full bg-muted/20 flex items-center justify-center relative group">
                                 {course.coverImage ? (
-                                    // eslint-disable-next-line @next/next/no-img-element
-                                    <img 
+                                    <Image 
                                         src={course.coverImage} 
                                         alt={course.title} 
-                                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                        fill
+                                        className="object-cover transition-transform duration-300 group-hover:scale-105"
                                     />
                                 ) : (
                                     <BookOpen className="h-10 w-10 text-muted-foreground/50" />
@@ -170,7 +171,7 @@ export default function TutorCoursesPage() {
                                                 <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                                                 <AlertDialogDescription>
                                                     This action cannot be undone. This will permanently delete the course
-                                                    "{course.title}" and remove the data from our servers.
+                                                    &quot;{course.title}&quot; and remove the data from our servers.
                                                 </AlertDialogDescription>
                                             </AlertDialogHeader>
                                             <AlertDialogFooter>

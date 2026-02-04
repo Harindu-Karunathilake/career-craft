@@ -6,8 +6,7 @@ import { doc, getDoc } from "firebase/firestore"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
-import { ArrowRight, CheckCircle, AlertTriangle, BarChart3, Calendar } from "lucide-react"
+import { ArrowRight, CheckCircle, AlertTriangle, BarChart3 } from "lucide-react"
 
 import { motion } from "framer-motion"
 

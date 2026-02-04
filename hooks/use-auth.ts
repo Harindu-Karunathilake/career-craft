@@ -16,7 +16,7 @@ export function useAuth() {
             if (user) {
                 // Subscribe to user profile in Firestore
                 const { doc, onSnapshot } = await import("firebase/firestore")
-                const unsubscribeSnapshot = onSnapshot(doc(firebaseDb, "users", user.uid), (doc) => {
+                onSnapshot(doc(firebaseDb, "users", user.uid), (doc) => {
                     if (doc.exists()) {
                         setProfile(doc.data())
                     } else {

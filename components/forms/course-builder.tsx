@@ -1,13 +1,12 @@
 "use client";
 
-import { useState } from "react";
 import { Chapter, Lesson } from "@/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Plus, Trash, GripVertical, Video, FileText, ChevronDown, ChevronUp, Clock } from "lucide-react";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
+import { Plus, Trash, Video, FileText, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
@@ -103,7 +102,7 @@ export function CourseBuilder({ chapters, setChapters }: CourseBuilderProps) {
 
       {chapters.length === 0 && (
         <div className="text-center p-8 border border-dashed rounded-lg bg-muted/20">
-          <p className="text-muted-foreground">No chapters yet. Click "Add Chapter" to start building your course.</p>
+          <p className="text-muted-foreground">No chapters yet. Click &quot;Add Chapter&quot; to start building your course.</p>
         </div>
       )}
 

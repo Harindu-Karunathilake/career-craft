@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import { collectionGroup, query, where, orderBy, getDocs } from "firebase/firestore";
 import { firebaseDb } from "@/lib/firebase";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Globe, Calendar, User, ArrowRight } from "lucide-react";
+import { Loader2, Globe, User, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import { PublishedInterview } from "@/types";
 
 export function PublishedInterviewsList() {
@@ -92,10 +93,11 @@ export function PublishedInterviewsList() {
                     {/* Cover Image */}
                     <div className="relative aspect-video w-full bg-zinc-900">
                         {interview.coverImage ? (
-                            <img 
+                            <Image 
                                 src={interview.coverImage} 
                                 alt={interview.role} 
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                fill
+                                className="object-cover transition-transform duration-500 group-hover:scale-105"
                             />
                         ) : (
                             <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20">

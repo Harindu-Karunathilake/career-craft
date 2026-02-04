@@ -67,7 +67,7 @@ function InterviewContent() {
 
     useEffect(() => {
         // Auto-start call on mount
-        const timer = setTimeout(() => {
+        setTimeout(() => {
             startCall();
         }, 0);
         

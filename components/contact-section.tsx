@@ -4,7 +4,7 @@ import Link from "next/link"
 import { motion } from "framer-motion"
 import { useState } from "react"
 
-import { contactDetails, emailTemplate, socialLinks } from "@/data/contact"
+import { contactDetails, socialLinks } from "@/data/contact"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"

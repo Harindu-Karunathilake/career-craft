@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2, Upload } from "lucide-react"
+import { Loader2 } from "lucide-react"
 
 import { CourseBuilder } from "./course-builder"
 import { Chapter } from "@/types"

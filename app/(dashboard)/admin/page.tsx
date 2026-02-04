@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { collection, getDocs, query, collectionGroup } from "firebase/firestore"
+import { collection, getDocs, collectionGroup } from "firebase/firestore"
 import { firebaseDb } from "@/lib/firebase"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { AdminAnalyticsCards } from "@/components/dashboard/admin-analytics-cards"

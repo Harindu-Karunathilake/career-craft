@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { firebaseDb, firebaseStorage, firebaseAuth } from "@/lib/firebase"; // Ensure firebaseAuth is imported
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { Loader2, Upload, Link as LinkIcon, Globe } from "lucide-react";
+import { Loader2, Upload, Link as LinkIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Interview } from "@/types";
+import Image from "next/image";
 
 interface PublishInterviewDialogProps {
     interview: Interview;
@@ -130,10 +131,10 @@ export function PublishInterviewDialog({ interview, children, onPublished }: Pub
                     {(imageUrl || file) && (
                         <div className="relative aspect-video w-full rounded-md overflow-hidden bg-white/5 border border-white/10 mt-4">
                            {mode === 'url' && imageUrl && (
-                                <img src={imageUrl} alt="Preview" className="w-full h-full object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} />
+                                <Image src={imageUrl} alt="Preview" fill className="object-cover" onError={(e) => (e.currentTarget.style.display = 'none')} unoptimized />
                            )}
                            {mode === 'upload' && file && (
-                                <img src={URL.createObjectURL(file)} alt="Preview" className="w-full h-full object-cover" />
+                                <Image src={URL.createObjectURL(file)} alt="Preview" fill className="object-cover" unoptimized />
                            )}
                            <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                                 <span className="text-white text-xs font-medium uppercase tracking-wider">Preview</span>

@@ -7,12 +7,9 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { collection, query, orderBy, getDocs, deleteDoc, doc } from "firebase/firestore"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
-import { useRouter } from "next/navigation"
-
 export default function TutorResumePage() {
     const [resumes, setResumes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
-    const router = useRouter();
 
     useEffect(() => {
         const fetchResumes = async () => {

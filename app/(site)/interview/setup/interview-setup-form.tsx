@@ -126,7 +126,7 @@ export default function InterviewSetupForm({
           };
           checkAuthAndStart();
       }
-  }, [autoStart, createInterview]);
+  }, [autoStart, createInterview, formData.role, formData.experience]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

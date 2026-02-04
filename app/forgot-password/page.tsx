@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { BackgroundRippleEffect } from "@/components/ui/background-ripple-effect"
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState("")

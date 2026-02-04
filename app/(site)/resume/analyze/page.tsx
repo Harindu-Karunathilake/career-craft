@@ -12,13 +12,12 @@ import { convertPdfToImage } from "@/lib/pdf2img"
 import { prepareInstructions } from "@/constants/resume-analysis"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
 import { doc, setDoc, collection } from "firebase/firestore"
-import { getStorage, ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 import { motion } from "framer-motion"
 
 export default function ResumeAnalyzePage() {
-  const { auth, isLoading: isPuterLoading, fs, ai, init } = usePuterStore();
+  const { auth, fs, ai, init } = usePuterStore();
   const [file, setFile] = useState<File | null>(null);
   const [jobTitle, setJobTitle] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -78,7 +77,6 @@ export default function ResumeAnalyzePage() {
     setStatusText("Initializing analysis...");
 
     try {
-        const storage = getStorage();
         const userId = currentUser?.uid;
         
         if (!userId) {
