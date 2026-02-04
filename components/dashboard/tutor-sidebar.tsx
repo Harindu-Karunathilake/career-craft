@@ -44,6 +44,12 @@ const navItems = [
     description: "Resume tools",
   },
   {
+    title: "Community",
+    href: "/published", // Assuming same route for all roles
+    icon: Briefcase,
+    description: "Browse published interviews",
+  },
+  {
     title: "Settings",
     href: "/tutor/settings",
     icon: Settings,

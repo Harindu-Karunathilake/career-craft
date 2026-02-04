@@ -8,6 +8,17 @@ import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription }
 import { Plus, BookOpen, Clock, DollarSign, MoreVertical } from "lucide-react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface Course {
     id: string;
@@ -139,10 +150,50 @@ export default function TutorCoursesPage() {
                                      </div>
                                  </div>
                              </CardContent>
-                             <CardFooter className="p-4 border-t bg-muted/5 flex justify-between">
-                                 <Button variant="ghost" size="sm" asChild>
-                                     <span className="text-muted-foreground">Edit</span>
-                                 </Button>
+                             <CardFooter className="p-4 border-t bg-muted/5 flex justify-between gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Button variant="ghost" size="sm" asChild>
+                                        <Link href={`/tutor/courses/${course.id}/edit`}>Edit</Link>
+                                    </Button>
+                                    <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button 
+                                                variant="ghost" 
+                                                size="sm" 
+                                                className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                                            >
+                                                Delete
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This action cannot be undone. This will permanently delete the course
+                                                    "{course.title}" and remove the data from our servers.
+                                                </AlertDialogDescription>
+                                            </AlertDialogHeader>
+                                            <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction
+                                                    className="bg-red-500 hover:bg-red-600"
+                                                    onClick={async () => {
+                                                        try {
+                                                            const { doc, deleteDoc } = await import("firebase/firestore");
+                                                            await deleteDoc(doc(firebaseDb, "courses", course.id));
+                                                            setCourses(courses.filter(c => c.id !== course.id));
+                                                        } catch (error) {
+                                                            console.error("Error deleting course:", error);
+                                                            alert("Failed to delete course");
+                                                        }
+                                                    }}
+                                                >
+                                                    Delete
+                                                </AlertDialogAction>
+                                            </AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                 </div>
                                  <Button variant="secondary" size="sm" asChild>
                                       <Link href={`/tutor/courses/${course.id}`}>View</Link>
                                  </Button>

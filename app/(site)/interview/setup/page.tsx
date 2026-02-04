@@ -1,11 +1,19 @@
 "use client"
 
+import { Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import InterviewSetupForm from "./interview-setup-form"
 import { motion } from "framer-motion"
 
-export default function InterviewSetupPage() {
+function InterviewSetupContent() {
+  const searchParams = useSearchParams();
+  const initialRole = searchParams.get('role') || '';
+  const initialTopic = searchParams.get('topic') || '';
+  const initialExperience = searchParams.get('experience') || '';
+  const autoStart = searchParams.get('autoStart') === 'true';
+
   return (
-    <main className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-black font-sans">
+      <main className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-black font-sans">
       {/* Background Effects */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(59,130,246,0.15),transparent_50%)]" />
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,rgba(16,185,129,0.1),transparent_50%)]" />
@@ -43,11 +51,24 @@ export default function InterviewSetupPage() {
             transition={{ duration: 0.5, delay: 0.4 }}
             className="w-full max-w-md"
         >
-            <InterviewSetupForm />
+            <InterviewSetupForm 
+              initialRole={initialRole}
+              initialTopic={initialTopic}
+              initialExperience={initialExperience}
+              autoStart={autoStart}
+            />
         </motion.div>
 
       </motion.div>
     </main>
+  )
+}
+
+export default function InterviewSetupPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center text-white">Loading...</div>}>
+      <InterviewSetupContent />
+    </Suspense>
   )
 }
 

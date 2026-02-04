@@ -1,8 +1,8 @@
-"use client"
+"use client";
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Briefcase, FileText, LayoutDashboard, Settings } from "lucide-react"
+import { Briefcase, FileText, LayoutDashboard, Settings, Globe } from "lucide-react"
 
 import {
   Sidebar,
@@ -36,6 +36,12 @@ const navItems = [
     href: "/user/resume",
     icon: FileText,
     description: "Documents & tailoring",
+  },
+  {
+    title: "Community",
+    href: "/published",
+    icon: Globe,
+    description: "Browse published interviews",
   },
   {
     title: "Settings",
