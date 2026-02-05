@@ -136,14 +136,55 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
             vapi.stop(); // Ensure any previous session is ended
             // Prepare dynamic interviewer object
             const questionsList = (data.questions || []).map((q: string, i: number) => `${i + 1}. ${q}`).join('\n');
+            
+            // Prepare context string
+            // Prepare context string
+            let contextString = "";
+            let personalizedGreeting = interviewer.firstMessage;
+
+            // Check if we actually have resume content
+            const hasResume = data.resumeContext?.fullText && data.resumeContext.fullText.length > 50;
+            const candidateName = data.resumeContext?.candidateName || "Candidate";
+
+            console.log("Greeting Debug:", { 
+                hasResume, 
+                fullTextLength: data.resumeContext?.fullText?.length,
+                candidateName,
+                rawContext: data.resumeContext 
+            });
+
+            if (hasResume) {
+                contextString = `
+                Candidate Name: ${candidateName}
+                Candidate Summary: ${data.resumeContext.summary}
+                
+                RESUME CONTENT:
+                ${data.resumeContext.fullText}
+                
+                INSTRUCTIONS:
+                - Use the "RESUME CONTENT" above to ask specific, relevant follow-up questions.
+                - Address the candidate by name occasionally.
+                - Dig deep into their specific projects and experience mentioned in the resume text.
+                `;
+                
+                // Personalize the greeting for resume users
+                personalizedGreeting = `Hello ${candidateName}! Thank you for taking the time to speak with me today. I've reviewed your resume and I'm excited to discuss your experience with ${data.resumeContext.summary ? "your projects" : "us"}.`;
+            } else if (candidateName !== "Candidate") {
+                 // Personalize greeting if we somehow have a name but no resume (unlikely but safe)
+                 personalizedGreeting = `Hello ${candidateName}! Thank you for joining me for this ${data.role} interview.`;
+            }
+
             const modifiedInterviewer = {
                 ...interviewer,
+                firstMessage: personalizedGreeting,
                 model: {
                     ...interviewer.model,
                     messages: [
                         {
                             ...interviewer.model.messages[0],
-                            content: interviewer.model.messages[0].content.replace('{{questions}}', questionsList || "Ask general questions.")
+                            content: interviewer.model.messages[0].content
+                                .replace('{{questions}}', questionsList || "Ask general questions.")
+                                .replace('{{resumeContext}}', contextString)
                         }
                     ]
                 }

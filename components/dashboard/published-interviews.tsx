@@ -87,11 +87,11 @@ export function PublishedInterviewsList() {
     }
 
     return (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {interviews.map((interview) => (
                 <Card key={interview.id} className="bg-white/5 border-white/10 hover:border-white/20 transition-all flex flex-col overflow-hidden hover:shadow-lg hover:shadow-indigo-500/10 group">
                     {/* Cover Image */}
-                    <div className="relative aspect-video w-full bg-zinc-900">
+                    <div className="relative h-40 w-full bg-zinc-900">
                         {interview.coverImage ? (
                             <Image 
                                 src={interview.coverImage} 
@@ -101,19 +101,19 @@ export function PublishedInterviewsList() {
                             />
                         ) : (
                             <div className="flex items-center justify-center w-full h-full bg-gradient-to-br from-indigo-500/20 to-purple-500/20">
-                                <Globe className="w-12 h-12 text-white/20" />
+                                <Globe className="w-8 h-8 text-white/20" />
                             </div>
                         )}
                         <div className="absolute top-2 right-2">
-                             <Badge className="bg-black/50 backdrop-blur border-white/10 text-white hover:bg-black/60">
+                             <Badge className="bg-black/50 backdrop-blur border-white/10 text-white hover:bg-black/60 text-xs px-2 py-0.5">
                                  {interview.experience}
                              </Badge>
                         </div>
                     </div>
 
-                    <CardHeader className="pb-3">
+                    <CardHeader className="p-4 pb-2">
                          <div className="flex items-center gap-2 mb-2">
-                             <Avatar className="h-6 w-6 border border-white/10">
+                             <Avatar className="h-5 w-5 border border-white/10">
                                  <AvatarImage src={interview.authorImage} />
                                  <AvatarFallback><User className="h-3 w-3" /></AvatarFallback>
                              </Avatar>
@@ -123,29 +123,20 @@ export function PublishedInterviewsList() {
                                  {interview.publishedAt?.seconds ? new Date(interview.publishedAt.seconds * 1000).toLocaleDateString() : 'Just now'}
                              </span>
                          </div>
-                        <CardTitle className="text-lg text-white group-hover:text-indigo-400 transition-colors truncate">
+                        <CardTitle className="text-base text-white group-hover:text-indigo-400 transition-colors truncate">
                             {interview.role}
                         </CardTitle>
-                        <CardDescription className="line-clamp-1">
+                        <CardDescription className="line-clamp-1 text-xs">
                             {interview.topic}
                         </CardDescription>
                     </CardHeader>
                     
-                    <CardFooter className="mt-auto pt-0">
-                        <div className="flex w-full gap-2">
-                            <Button variant="outline" className="flex-1 hover:bg-white/5 hover:text-indigo-400 group/btn border-white/10" asChild>
-                                <Link href={`/interview/setup?role=${encodeURIComponent(interview.role)}&experience=${encodeURIComponent(interview.experience)}&topic=${encodeURIComponent(interview.topic)}&autoStart=true`}>
-                                   Attempt
-                                </Link>
-                            </Button>
-                            <Button variant="ghost" className="flex-1 justify-between hover:bg-white/5 hover:text-indigo-400 group/btn" asChild>
-                                {/* In a real app, this would link to a public view page. For now, maybe just show feedback or minimal view */}
-                                <Link href={`/interview/${interview.id}/feedback?uid=${interview.authorId}`}>
-                                    View
-                                    <ArrowRight className="h-4 w-4 transition-transform group-hover/btn:translate-x-1" />
-                                </Link>
-                            </Button>
-                        </div>
+                    <CardFooter className="p-4 pt-0">
+                        <Button variant="outline" size="sm" className="w-full hover:bg-white/5 h-8 text-xs hover:text-indigo-400 group/btn border-white/10" asChild>
+                            <Link href={`/interview/setup?role=${encodeURIComponent(interview.role)}&experience=${encodeURIComponent(interview.experience)}&topic=${encodeURIComponent(interview.topic)}&autoStart=true`}>
+                               Attempt
+                            </Link>
+                        </Button>
                     </CardFooter>
                 </Card>
             ))}

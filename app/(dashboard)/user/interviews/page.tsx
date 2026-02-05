@@ -2,15 +2,27 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { collection, query, orderBy, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, getDocs, deleteDoc, doc } from "firebase/firestore";
 import { firebaseDb, firebaseAuth } from "@/lib/firebase";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Play, FileText, RefreshCw, Plus, Calendar, Globe } from "lucide-react";
+import { Loader2, Play, FileText, RefreshCw, Plus, Calendar, Globe, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { Interview } from "@/types";
 import { PublishInterviewDialog } from "@/components/dashboard/publish-interview-dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 export default function UserInterviewsPage() {
     const router = useRouter();
@@ -43,6 +55,20 @@ export default function UserInterviewsPage() {
             console.error("Error fetching interviews:", error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleDelete = async (interviewId: string) => {
+        const userId = firebaseAuth.currentUser?.uid;
+        if (!userId) return;
+
+        try {
+            await deleteDoc(doc(firebaseDb, "users", userId, "interviews", interviewId));
+            setInterviews(prev => prev.filter(i => i.id !== interviewId));
+            toast.success("Interview deleted successfully.");
+        } catch (error) {
+            console.error("Error deleting interview:", error);
+            toast.error("Failed to delete interview.");
         }
     };
 
@@ -135,8 +161,34 @@ export default function UserInterviewsPage() {
             ) : (
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {filteredInterviews.map((interview) => (
-                        <Card key={interview.id} className="bg-white/5 border-white/10 hover:border-white/20 transition-all flex flex-col hover:shadow-lg hover:shadow-emerald-500/5 group">
-                            <CardHeader>
+                        <Card key={interview.id} className="bg-white/5 border-white/10 hover:border-white/20 transition-all flex flex-col hover:shadow-lg hover:shadow-emerald-500/5 group relative">
+                            <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <AlertDialog>
+                                    <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-red-500 hover:bg-red-500/10">
+                                            <Trash2 className="h-4 w-4" />
+                                        </Button>
+                                    </AlertDialogTrigger>
+                                    <AlertDialogContent className="bg-zinc-900 border-white/10 text-white">
+                                        <AlertDialogHeader>
+                                            <AlertDialogTitle>Delete Interview?</AlertDialogTitle>
+                                            <AlertDialogDescription className="text-zinc-400">
+                                                This action cannot be undone. This will permanently delete your interview record and feedback.
+                                            </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                            <AlertDialogCancel className="bg-transparent border-white/10 hover:bg-white/5 hover:text-white">Cancel</AlertDialogCancel>
+                                            <AlertDialogAction 
+                                                onClick={() => handleDelete(interview.id)}
+                                                className="bg-red-600 hover:bg-red-700 text-white border-0"
+                                            >
+                                                Delete
+                                            </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                    </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
+                            <CardHeader className="pr-12">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-2">
                                         <Badge variant={interview.status === 'completed' ? 'default' : 'outline'} className={interview.status === 'completed' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "text-yellow-500 border-yellow-500/20"}>
@@ -155,7 +207,7 @@ export default function UserInterviewsPage() {
                                         </span>
                                     )}
                                 </div>
-                                <CardTitle className="text-foreground mt-2 truncate group-hover:text-indigo-400 transition-colors">{interview.role}</CardTitle>
+                                <CardTitle className="text-foreground mt-2 truncate group-hover:text-indigo-400 transition-colors pr-8">{interview.role}</CardTitle>
                                 <CardDescription className="text-muted-foreground">
                                     {interview.experience} • {interview.topic}
                                 </CardDescription>
