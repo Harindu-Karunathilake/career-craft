@@ -17,23 +17,37 @@ export async function POST(req: Request) {
             return new Response(JSON.stringify({ error: 'Role is required' }), { status: 400 });
         }
 
-        const result = await generateObject({
-            model: google('gemini-2.5-flash'),
-            schema: z.object({
-                isValid: z.boolean(),
-                message: z.string().describe("A helpful message explaining why the role is invalid or a confirmation if it is valid. If invalid, suggest 2-3 suitable IT roles."),
-            }),
-            prompt: `
-        Analyze the job role: "${role}".
-        Determine if this job role is a valid and recognized role within the Information Technology (IT), Software Engineering, Data Science, or tech industry.
-        
-        Strictly reject roles that are clearly non-technical or unrelated to the tech industry (e.g., "Chef", "Driver", "Doctor", "Gardener", "Teacher" unless it's "CS Teacher", etc.).
-        Accept broad but tech-related roles (e.g., "Project Manager", "Product Owner", "Designer").
-        Reject gibberish or nonsense strings.
-        
-        Return a boolean 'isValid' and a 'message'.
-      `,
-        });
+        // Retry logic for rate limits
+        const generateWithRetry = async (retries = 3, delay = 1000) => {
+            try {
+                return await generateObject({
+                    model: google('gemini-2.5-flash'), // Fallback to standard 1.0 Pro
+                    schema: z.object({
+                        isValid: z.boolean(),
+                        message: z.string().describe("A helpful message explaining why the role is invalid or a confirmation if it is valid. If invalid, suggest 2-3 suitable IT roles."),
+                    }),
+                    prompt: `
+            Analyze the job role: "${role}".
+            Determine if this job role is a valid and recognized role within the Information Technology (IT), Software Engineering, Data Science, or tech industry.
+            
+            Strictly reject roles that are clearly non-technical or unrelated to the tech industry (e.g., "Chef", "Driver", "Doctor", "Gardener", "Teacher" unless it's "CS Teacher", etc.).
+            Accept broad but tech-related roles (e.g., "Project Manager", "Product Owner", "Designer").
+            Reject gibberish or nonsense strings.
+            
+            Return a boolean 'isValid' and a 'message'.
+          `,
+                });
+            } catch (error: any) {
+                if (retries > 0 && (error?.message?.includes('429') || error?.message?.includes('Quota'))) {
+                    console.log(`Rate limit hit (validation), retrying in ${delay}ms...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    return generateWithRetry(retries - 1, delay * 2);
+                }
+                throw error;
+            }
+        };
+
+        const result = await generateWithRetry();
 
         return new Response(JSON.stringify(result.object), {
             status: 200,

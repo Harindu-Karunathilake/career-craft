@@ -21,10 +21,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Play, Loader2, Sparkles, LayoutDashboard } from 'lucide-react';
+import { Play, Loader2, Sparkles, LayoutDashboard, FileText, Upload } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { firebaseDb, firebaseAuth } from '@/lib/firebase';
 import { toast } from 'sonner';
+import { extractTextFromPdf } from '@/lib/pdf2text';
+import { usePuterStore } from '@/lib/puter';
 
 interface InterviewSetupFormProps {
   initialRole?: string;
@@ -50,8 +52,12 @@ export default function InterviewSetupForm({
     type: 'Technical',
     questionCount: '5',
   });
+  
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
+  const { ai } = usePuterStore();
 
-  const createInterview = useCallback(async (isAutoStart: boolean = false) => {
+    const createInterview = useCallback(async (isAutoStart: boolean = false) => {
+    console.log("createInterview called. Resume File:", resumeFile ? resumeFile.name : "None", "Size:", resumeFile?.size);
     if (!formData.role || !formData.experience) return;
 
     const userId = firebaseAuth.currentUser?.uid;
@@ -81,26 +87,88 @@ export default function InterviewSetupForm({
             }
         }
 
-        // 1. Generate Questions via API
-        const response = await fetch('/api/interview/generate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                role: formData.role,
-                experience: formData.experience,
-                topic: formData.topic || 'General',
-                type: formData.type,
-                questionCount: formData.questionCount
-            })
-        });
+        // 1. Generate Questions via API or Resume Analysis
+        let questions = [];
+        let resumeText = "";
 
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || "Failed to generate questions");
+        if (resumeFile) {
+            // Extract text from Resume
+            toast.info("Analyzing resume...");
+            resumeText = await extractTextFromPdf(resumeFile);
+            
+            // Generate using Puter JS
+            // toast.loading("Generating generic questions relative to your resume...");
+            
+            const prompt = `
+                You are an expert technical interviewer.
+                I have uploaded a resume for a ${formData.role} position (Experience: ${formData.experience}).
+                Focus Topic: ${formData.topic || 'General'}.
+                
+                Resume Content:
+                ${resumeText.slice(0, 8000)} {/* Truncate to avoid huge context */}
+                
+                Generate ${formData.questionCount} ${formData.type} interview questions based SPECIFICALLY on the projects, skills, and experience in this resume.
+                Ask about specific details found in the resume text.
+                
+                ALSO, extract the candidate's Name and a brief 2-sentence professional summary from the resume to give current context to the interviewer.
+                
+                Return ONLY a JSON object with this shape: 
+                { 
+                    "questions": ["Question 1", "Question 2"...],
+                    "candidateName": "Name or Candidate",
+                    "summary": "Brief summary of candidate..."
+                }
+                Do not add markdown formatting like \`\`\`json. Just the raw JSON string.
+            `;
+
+            const result = await ai.chat(prompt);
+            
+            // Parse Puter's response
+            // Puter usually returns an object that might need parsing depending on the model/wrapper
+            // Assuming result is compatible or we need to extract the text content
+            // The lib/puter.ts returns "AIResponse | undefined"
+            
+            if (result?.message?.content) {
+                 const content = typeof result.message.content === 'string' ? result.message.content : JSON.stringify(result.message.content);
+                 // Clean markdown code blocks if present
+                 const cleanContent = content.replace(/```json/g, '').replace(/```/g, '').trim();
+                 try {
+                    const parsed = JSON.parse(cleanContent);
+                    questions = parsed.questions || [];
+                    // Small hack to pass the extra data through the same variable temporarily or use a separate one
+                    (questions as any).candidateName = parsed.candidateName;
+                    (questions as any).summary = parsed.summary;
+                 } catch (e) {
+                     console.error("Failed to parse AI response", e);
+                     // Fallback to simple split if JSON fails or standard generation
+                     throw new Error("Failed to parse Resume analysis. Please try again or skip resume.");
+                 }
+            } else {
+                 throw new Error("Failed to get response from AI Analysis.");
+            }
+
+        } else {
+             // Standard Generation
+            const response = await fetch('/api/interview/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    role: formData.role,
+                    experience: formData.experience,
+                    topic: formData.topic || 'General',
+                    type: formData.type,
+                    questionCount: formData.questionCount
+                })
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || "Failed to generate questions");
+            }
+            
+            const data = await response.json();
+            questions = data.questions;
         }
-        
-        const data = await response.json();
-        const questions = data.questions;
 
         // 2. Save to Firebase
         const docRef = await addDoc(collection(firebaseDb, "users", userId, "interviews"), {
@@ -109,6 +177,11 @@ export default function InterviewSetupForm({
             topic: formData.topic || 'General',
             type: formData.type,
             questions: questions,
+            resumeContext: {
+                candidateName: (questions as any).candidateName || "Candidate",
+                summary: (questions as any).summary || "No summary available.",
+                fullText: resumeText.slice(0, 15000) 
+            },
             status: "pending", // pending, completed
             createdAt: serverTimestamp(),
             interviewType: "Simulated" 
@@ -128,7 +201,7 @@ export default function InterviewSetupForm({
     } finally {
         setIsLoading(false);
     }
-  }, [formData, router]);
+  }, [formData, router, resumeFile, ai]);
 
   useEffect(() => {
       // Auto-start logic
@@ -249,6 +322,26 @@ export default function InterviewSetupForm({
               <SelectItem value="10">10 Questions (Deep Dive)</SelectItem>
             </SelectContent>
           </Select>
+        </div>
+
+        {/* Resume Upload */}
+        <div className="space-y-2">
+            <Label htmlFor="resume" className="text-white flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Upload Resume (Optional)
+            </Label>
+            <div className="flex items-center gap-4">
+                 <Input 
+                    id="resume"
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                    className="bg-black/40 border-white/10 text-white file:text-indigo-400 file:border-0 file:bg-transparent file:font-semibold"
+                 />
+            </div>
+            <p className="text-xs text-zinc-500">
+                Upload your resume (PDF) to get tailored questions based on your actual experience.
+            </p>
         </div>
 
         <div className="pt-4">
