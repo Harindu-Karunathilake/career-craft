@@ -154,7 +154,7 @@ export default function TutorInterviewsPage() {
                                     </AlertDialogContent>
                                 </AlertDialog>
                             </div>
-                            <CardHeader>
+                            <CardHeader className="pr-12">
                                 <div className="flex items-start justify-between">
                                     <Badge variant={interview.status === 'completed' ? 'default' : 'outline'} className={interview.status === 'completed' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "text-yellow-500 border-yellow-500/20"}>
                                         {interview.status === 'completed' ? 'Completed' : 'Pending'}

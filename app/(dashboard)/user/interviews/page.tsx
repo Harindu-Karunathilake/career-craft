@@ -188,7 +188,7 @@ export default function UserInterviewsPage() {
                                     </AlertDialogContent>
                                 </AlertDialog>
                             </div>
-                            <CardHeader>
+                            <CardHeader className="pr-12">
                                 <div className="flex items-start justify-between">
                                     <div className="flex items-center gap-2">
                                         <Badge variant={interview.status === 'completed' ? 'default' : 'outline'} className={interview.status === 'completed' ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" : "text-yellow-500 border-yellow-500/20"}>
