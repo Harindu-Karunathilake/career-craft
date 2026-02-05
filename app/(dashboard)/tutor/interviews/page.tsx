@@ -176,7 +176,7 @@ export default function TutorInterviewsPage() {
                                     {interview.questions ? `${interview.questions.length} Questions generated.` : 'Questions ready.'}
                                 </p>
                             </CardContent>
-                            <CardFooter className="pt-4 border-t border-white/5 gap-2">
+                            <CardFooter className="pt-4 border-t border-white/5 flex flex-col gap-2">
                                 {interview.status === 'completed' ? (
                                     <>
                                         <Button variant="outline" className="flex-1 border-white/10 hover:bg-white/10 hover:text-white" asChild>
@@ -185,10 +185,10 @@ export default function TutorInterviewsPage() {
                                                 Feedback
                                             </Link>
                                         </Button>
-                                        <Button variant="ghost" size="icon" className="hover:text-white" asChild>
+                                        <Button variant="ghost" size="sm" className="w-full hover:text-white" asChild>
                                                 <Link href="/interview/setup">
-                                                <RefreshCw className="h-4 w-4" />
-                                                <span className="sr-only">Retake</span>
+                                                <RefreshCw className="h-3 w-3 mr-2" />
+                                                Retake Interview
                                             </Link>
                                         </Button>
                                     </>
