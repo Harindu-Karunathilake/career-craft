@@ -45,7 +45,7 @@ const navItems = [
   },
   {
     title: "Community",
-    href: "/published", // Assuming same route for all roles
+    href: "/tutor/community",
     icon: Briefcase,
     description: "Browse published interviews",
   },
