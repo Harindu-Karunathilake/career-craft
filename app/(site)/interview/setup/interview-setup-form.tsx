@@ -24,6 +24,7 @@ import {
 import { Play, Loader2, Sparkles, LayoutDashboard } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { firebaseDb, firebaseAuth } from '@/lib/firebase';
+import { toast } from 'sonner';
 
 interface InterviewSetupFormProps {
   initialRole?: string;
@@ -54,15 +55,32 @@ export default function InterviewSetupForm({
     if (!formData.role || !formData.experience) return;
 
     const userId = firebaseAuth.currentUser?.uid;
-    // If auto-start and no user, we can't proceed. Ideally we'd redirect to login but for now alert/return
     if (!userId) { 
-        if (!isAutoStart) alert("Please log in to start an interview.");
+        if (!isAutoStart) toast.error("Please log in to start an interview.");
         return; 
     }
 
     setIsLoading(true);
     
     try {
+        // 0. Validate Role
+        if (!isAutoStart) { // Skip validation for auto-start or validate there too if needed, but usually user input needs validation
+            const validationResponse = await fetch('/api/validate-role', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ role: formData.role })
+            });
+            
+            if (validationResponse.ok) {
+                const validationData = await validationResponse.json();
+                if (!validationData.isValid) {
+                    toast.error(validationData.message || "Invalid job role. Please enter a valid IT/Tech role.");
+                    setIsLoading(false);
+                    return;
+                }
+            }
+        }
+
         // 1. Generate Questions via API
         const response = await fetch('/api/interview/generate', {
             method: 'POST',
@@ -106,7 +124,7 @@ export default function InterviewSetupForm({
 
     } catch (error) {
         console.error("Setup Error:", error);
-        if (!isAutoStart) alert(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+        toast.error(error instanceof Error ? error.message : "Something went wrong. Please try again.");
     } finally {
         setIsLoading(false);
     }
