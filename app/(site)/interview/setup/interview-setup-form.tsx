@@ -27,6 +27,7 @@ import { firebaseDb, firebaseAuth } from '@/lib/firebase';
 import { toast } from 'sonner';
 import { extractTextFromPdf } from '@/lib/pdf2text';
 import { usePuterStore } from '@/lib/puter';
+import { useAuth } from '@/hooks/use-auth';
 
 interface InterviewSetupFormProps {
   initialRole?: string;
@@ -224,6 +225,8 @@ export default function InterviewSetupForm({
     createInterview(false);
   };
 
+  const { profile } = useAuth();
+
   const handleStartNow = () => {
     if (generatedInterviewId) {
         router.push(`/interview/${generatedInterviewId}`);
@@ -231,7 +234,11 @@ export default function InterviewSetupForm({
   };
 
   const handleLater = () => {
-    router.push('/user/interviews');
+    if (profile?.role === 'tutor') {
+        router.push('/tutor/interviews');
+    } else {
+        router.push('/user/interviews');
+    }
   };
 
   return (
