@@ -143,7 +143,7 @@ export function RecommendedJobs() {
                     <Briefcase className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
                     <h3 className="text-sm font-medium text-white">No matching jobs found</h3>
                     <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
-                        We couldn't find any new jobs matching your resume right now. Try updating your resume or checking back later.
+                        We couldn&apos;t find any new jobs matching your resume right now. Try updating your resume or checking back later.
                     </p>
                     <Button variant="outline" size="sm" onClick={generateRecommendations} className="mt-4 border-white/10 text-white hover:bg-white/5">
                         Try Again

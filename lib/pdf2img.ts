@@ -4,12 +4,12 @@ export interface PdfConversionResult {
     error?: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+//
 let pdfjsLib: any = null;
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+//
 let loadPromise: Promise<any> | null = null;
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+//
 async function loadPdfJs(): Promise<any> {
     if (pdfjsLib) return pdfjsLib;
     if (loadPromise) return loadPromise;
