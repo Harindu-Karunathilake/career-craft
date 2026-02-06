@@ -12,7 +12,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 
 interface RecommendedJob {
-    id: number;
+    id: number | string;
     role: string;
     company_name: string;
     location: string;
@@ -29,6 +29,7 @@ export function RecommendedJobs() {
     const [analyzing, setAnalyzing] = useState(false);
     const [hasResume, setHasResume] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [hasSearched, setHasSearched] = useState(false);
 
     useEffect(() => {
         const checkResume = async () => {
@@ -78,6 +79,7 @@ export function RecommendedJobs() {
         } finally {
             setLoading(false);
             setAnalyzing(false);
+            setHasSearched(true);
         }
     };
 
@@ -136,12 +138,29 @@ export function RecommendedJobs() {
                 </div>
             )}
 
+            {!loading && hasSearched && recommendations.length === 0 && !error && (
+                <div className="p-6 bg-white/5 border border-white/10 rounded-xl text-center">
+                    <Briefcase className="h-8 w-8 text-muted-foreground mx-auto mb-3" />
+                    <h3 className="text-sm font-medium text-white">No matching jobs found</h3>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                        We couldn't find any new jobs matching your resume right now. Try updating your resume or checking back later.
+                    </p>
+                    <Button variant="outline" size="sm" onClick={generateRecommendations} className="mt-4 border-white/10 text-white hover:bg-white/5">
+                        Try Again
+                    </Button>
+                </div>
+            )}
+
             {!loading && recommendations.length > 0 && (
-                 <div className="grid gap-6 sm:grid-cols-1 lg:grid-cols-3">
-                    {recommendations.map((job) => (
-                        <Card key={job.id} className="bg-white/5 border-white/10 hover:border-blue-500/30 transition-all flex flex-col overflow-hidden group">
-                           <div className="relative p-6 pb-2">
-                                <div className="absolute top-4 right-4">
+                 <div className="flex overflow-x-auto pb-6 gap-6 snap-x -mx-6 px-6 sm:mx-0 sm:px-0 [&::-webkit-scrollbar]:h-2 [&::-webkit-scrollbar-track]:bg-white/5 [&::-webkit-scrollbar-thumb]:bg-white/20 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/30 transition-colors">
+                    {recommendations.map((job) => {
+                        // Debugging: Log invalid jobs if any slip through
+                        if (!job.url) console.warn("Job missing URL:", job);
+
+                        return (
+                        <Card key={job.id} className="min-w-[320px] max-w-[320px] bg-white/5 border-white/10 hover:border-blue-500/30 transition-all flex flex-col overflow-hidden group snap-center">
+                           <div className="relative p-4 pb-2">
+                                <div className="absolute top-2 right-2">
                                      <Badge className={`backdrop-blur border-white/10 text-white text-xs px-2 py-0.5 ${job.matchScore > 80 ? 'bg-green-500/60' : 'bg-blue-500/60'}`}>
                                          {job.matchScore}% Match
                                      </Badge>
@@ -158,23 +177,28 @@ export function RecommendedJobs() {
                                 </div>
                            </div>
                             
-                            <CardHeader className="p-6 pt-0 pb-2">
-                                <CardDescription className="text-xs mt-2 bg-white/5 p-3 rounded-lg border border-white/5">
-                                    <span className="text-blue-300 font-medium block mb-1">Why this fits:</span> 
-                                    {job.reason}
+                            <CardHeader className="p-4 pb-2">
+                                <CardDescription className="line-clamp-2 text-xs mt-1 h-8">
+                                    <span className="text-blue-300 font-medium">Why: </span> {job.reason}
                                 </CardDescription>
                             </CardHeader>
                             
-                            <CardFooter className="p-6 pt-auto mt-auto flex items-center justify-between text-xs text-muted-foreground">
+                            <CardFooter className="p-4 pt-auto mt-auto flex items-center justify-between text-xs text-muted-foreground">
                                 <span>Posted {formatDistanceToNow(new Date(job.date_posted), { addSuffix: true })}</span>
-                                <Button variant="secondary" size="sm" className="h-8 gap-2" asChild>
-                                    <a href={job.url} target="_blank" rel="noopener noreferrer">
-                                       Apply <ExternalLink className="h-3 w-3" />
-                                    </a>
-                                </Button>
+                                {job.url ? (
+                                    <Button variant="secondary" size="sm" className="h-8 gap-2" asChild>
+                                        <a href={job.url} target="_blank" rel="noopener noreferrer">
+                                           Apply <ExternalLink className="h-3 w-3" />
+                                        </a>
+                                    </Button>
+                                ) : (
+                                    <Button variant="secondary" size="sm" className="h-8 gap-2 opacity-50 cursor-not-allowed" disabled>
+                                        No Link <ExternalLink className="h-3 w-3" />
+                                    </Button>
+                                )}
                             </CardFooter>
                         </Card>
-                    ))}
+                    )})}
                  </div>
             )}
         </div>

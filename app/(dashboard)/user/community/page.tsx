@@ -1,3 +1,5 @@
+"use client";
+
 import { PublishedInterviewsList } from "@/components/dashboard/published-interviews";
 import { PublishedCoursesList } from "@/components/dashboard/published-courses";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
