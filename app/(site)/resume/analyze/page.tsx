@@ -14,6 +14,8 @@ import { firebaseDb, firebaseAuth } from "@/lib/firebase"
 import { doc, setDoc, collection } from "firebase/firestore"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
+import { extractTextFromPdf } from "@/lib/pdf2text";
+
 import { motion } from "framer-motion"
 
 export default function ResumeAnalyzePage() {
@@ -86,10 +88,16 @@ export default function ResumeAnalyzePage() {
             return;
         }
 
-        // 1. Upload to Puter FS (Required for Analysis)
-        setStatusText("Uploading to temporary analysis environment...");
-        const uploadedFile = await fs.upload([file]);
-        if (!uploadedFile) throw new Error("Failed to upload to Puter");
+        // 1. Extract Text Locally (Bypass Puter FS)
+        setStatusText("Extracting text from resume...");
+        let resumeText = "";
+        try {
+            resumeText = await extractTextFromPdf(file);
+            console.log("Text extraction successful, length:", resumeText.length);
+        } catch (err) {
+            console.error("Text extraction failed:", err);
+            throw new Error("Failed to extract text from PDF. Please try a different file.");
+        }
 
         // 2. Convert to Image (for visual preview)
         setStatusText("Processing document...");
@@ -134,13 +142,43 @@ export default function ResumeAnalyzePage() {
         const imageUrl = imageUpload.storagePath;
 
         // 4. Run AI Analysis
-        setStatusText("Analyzing content against job description...");
-        const feedback = await ai.feedback(
-            uploadedFile.path,
-            prepareInstructions({ jobTitle, jobDescription })
-        );
 
-        if (!feedback) throw new Error("AI Analysis failed");
+
+        // 4. Run AI Analysis
+        setStatusText("Analyzing content against job description...");
+        
+        // Debug: Log extracted text details
+        console.log(`Resume Text Length: ${resumeText.length}`);
+        console.log(`Resume Text Snippet: ${resumeText.substring(0, 200)}...`);
+
+        // Debug: Test AI Connectivity
+        try {
+            console.log("Testing AI connectivity with simple prompt...");
+            const testResponse = await ai.chat("Hello, are you working?");
+            console.log("AI Test Response:", testResponse);
+        } catch (testError) {
+            console.error("AI Connectivity Test Failed:", testError);
+        }
+
+        // Construct the prompt manually since we are using raw text
+        const instructions = prepareInstructions({ jobTitle, jobDescription });
+        const fullPrompt = `
+RESUME CONTENT:
+${resumeText}
+
+${instructions}
+        `.trim();
+
+        console.log("Sending full analysis prompt to AI...");
+        const feedback = await ai.chat(fullPrompt);
+        
+        console.log("AI Feedback Result:", feedback);
+
+        if (!feedback) {
+            console.error("AI returned null/undefined feedback");
+            throw new Error("AI Analysis failed (No response)");
+        }
+
 
         const feedbackText = typeof feedback.message.content === 'string'
             ? feedback.message.content
