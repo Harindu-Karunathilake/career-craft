@@ -3,13 +3,13 @@ import { PublishedCoursesList } from "@/components/dashboard/published-courses";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JobsList } from "@/components/dashboard/jobs-list";
 
-export default function TutorCommunityPage() {
+export default function UserCommunityPage() {
     return (
         <div className="space-y-8 animate-in fade-in-50 duration-500">
             <div>
                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">Community</p>
                 <h1 className="text-3xl font-bold tracking-tight">Explore</h1>
-                <p className="text-muted-foreground mt-1">Discover interviews and courses shared by the community.</p>
+                <p className="text-muted-foreground mt-1">Discover interviews, courses, and jobs.</p>
             </div>
 
             <Tabs defaultValue="courses" className="space-y-6">
