@@ -7,7 +7,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/comp
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Globe, User, ArrowRight } from "lucide-react";
+import { Loader2, Globe, User } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { PublishedInterview } from "@/types";
