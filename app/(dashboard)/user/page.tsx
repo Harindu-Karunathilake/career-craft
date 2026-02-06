@@ -6,8 +6,6 @@ import { firebaseAuth, firebaseDb } from "@/lib/firebase"
 import { AnalyticsCards } from "@/components/dashboard/analytics-cards"
 import { ProgressChart } from "@/components/dashboard/progress-chart"
 import { ScoreChart } from "@/components/dashboard/score-chart"
-import { RecommendedCourses } from "@/components/dashboard/recommended-courses"
-import { RecommendedJobs } from "@/components/dashboard/recommended-jobs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function UserOverviewPage() {
@@ -127,10 +125,6 @@ export default function UserOverviewPage() {
       </div>
 
       <AnalyticsCards interviewCount={interviewCount} resumeCount={resumeCount} />
-
-      <RecommendedCourses />
-      
-      <RecommendedJobs />
 
       <div className="grid gap-4 md:grid-cols-2">
         <ScoreChart data={scoreData} />

@@ -162,7 +162,7 @@ export function RecommendedCourses() {
     }
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-6 py-8 mb-8">
              <div className="flex items-center justify-between">
                 <div>
                      <h3 className="text-xl font-semibold text-white flex items-center gap-2">

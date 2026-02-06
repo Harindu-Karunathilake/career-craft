@@ -5,6 +5,7 @@ import { PublishedCoursesList } from "@/components/dashboard/published-courses";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JobsList } from "@/components/dashboard/jobs-list";
 import { RecommendedJobs } from "@/components/dashboard/recommended-jobs";
+import { RecommendedCourses } from "@/components/dashboard/recommended-courses";
 
 export default function UserCommunityPage() {
     return (
@@ -42,6 +43,7 @@ export default function UserCommunityPage() {
                 </TabsContent>
                 
                 <TabsContent value="courses" className="animate-in slide-in-from-right-4 duration-300">
+                    <RecommendedCourses />
                     <PublishedCoursesList />
                 </TabsContent>
 
