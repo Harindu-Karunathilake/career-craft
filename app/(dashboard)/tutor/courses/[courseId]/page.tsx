@@ -98,7 +98,7 @@ export default function CourseDetailsPage() {
                                         return url;
                                     }
                                     return null;
-                                } catch (e) {
+                                } catch {
                                     return null;
                                 }
                             };

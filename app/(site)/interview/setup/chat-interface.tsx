@@ -15,7 +15,6 @@ export default function ChatInterface() {
   const [localInput, setLocalInput] = useState('');
   const [mounted, setMounted] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     setMounted(true); 
   }, []);

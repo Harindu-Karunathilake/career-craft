@@ -1,4 +1,6 @@
 import "server-only";
+import path from "path";
+import { pathToFileURL } from "url";
 
 // We need to use standard import for node environment
 // const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js"); 
@@ -41,13 +43,9 @@ export async function extractTextFromBuffer(buffer: Buffer): Promise<string> {
 
         // Manually configure the worker source for Node.js environment
         // preventing the "Setting up fake worker failed" error
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const path = require("path");
         const workerPath = path.join(process.cwd(), "node_modules", "pdfjs-dist", "legacy", "build", "pdf.worker.mjs");
 
         // Convert to file URL for Windows compatibility (ESM loader requirement)
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const { pathToFileURL } = require("url");
         pdfjsLib.GlobalWorkerOptions.workerSrc = pathToFileURL(workerPath).href;
 
         // In Node, we don't set GlobalWorkerOptions.workerSrc usually, or we assume it runs in main thread.

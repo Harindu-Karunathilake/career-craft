@@ -1,7 +1,7 @@
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
-import { doc, getDoc, collection, query, limit, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, limit, orderBy, getDocs } from 'firebase/firestore';
 import { firebaseDb } from '@/lib/firebase';
 import { adminStorage } from '@/lib/firebase-admin';
 import { decryptBuffer } from '@/lib/encryption-server';

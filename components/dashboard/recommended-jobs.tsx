@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { collection, query, orderBy, limit, getDocs } from "firebase/firestore";
 import { firebaseAuth, firebaseDb } from "@/lib/firebase";
-import { Card, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardDescription, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Loader2, Briefcase, Sparkles, AlertCircle, Building2, MapPin, ExternalLink } from "lucide-react";
@@ -92,9 +92,9 @@ export function RecommendedJobs() {
                     </div>
                     <div>
                         <h3 className="text-lg font-semibold text-white">Unlock AI Job Recommendations</h3>
-                        <p className="text-sm text-muted-foreground max-w-md mt-1">
-                            Upload your resume to get hand-picked top 3 job matches tailored to your profile.
-                        </p>
+                            <p className="text-sm text-center text-muted-foreground">
+                                You&apos;re all caught up! No more job recommendations available at the moment.
+                            </p>
                     </div>
                     <Button asChild variant="secondary" size="sm">
                         <Link href="/user/resume">Upload Resume</Link>

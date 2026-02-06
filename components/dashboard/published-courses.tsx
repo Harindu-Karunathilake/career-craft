@@ -6,7 +6,7 @@ import { firebaseDb } from "@/lib/firebase";
 import { Card, CardHeader, CardTitle, CardDescription, CardFooter, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, BookOpen, Clock, DollarSign, ArrowRight } from "lucide-react";
+import { Loader2, BookOpen, Clock } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 

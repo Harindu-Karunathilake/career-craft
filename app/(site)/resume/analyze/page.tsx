@@ -19,7 +19,7 @@ import { extractTextFromPdf } from "@/lib/pdf2text";
 import { motion } from "framer-motion"
 
 export default function ResumeAnalyzePage() {
-  const { auth, fs, ai, init } = usePuterStore();
+  const { auth, ai, init } = usePuterStore();
   const [file, setFile] = useState<File | null>(null);
   const [jobTitle, setJobTitle] = useState("");
   const [companyName, setCompanyName] = useState("");

@@ -97,7 +97,7 @@ export default function InterviewSessionPage({ params }: { params: Promise<{ id:
             console.error("Vapi Error RAW:", error);
             try {
                 console.error("Vapi Error JSON:", JSON.stringify(error, Object.getOwnPropertyNames(error)));
-            } catch (e) {
+            } catch {
                 console.error("Could not stringify error");
             }
         };
