@@ -39,7 +39,7 @@ const navItems = [
   },
   {
     title: "Community",
-    href: "/published",
+    href: "/user/community",
     icon: Globe,
     description: "Browse published interviews",
   },

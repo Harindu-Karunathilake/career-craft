@@ -15,8 +15,8 @@ export default function ChatInterface() {
   const [localInput, setLocalInput] = useState('');
   const [mounted, setMounted] = useState(false);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
+    // eslint-disable-next-line
     setMounted(true); 
   }, []);
 
@@ -44,7 +44,7 @@ export default function ChatInterface() {
             (tool: any) => tool.toolName === 'generateInterview' && 'result' in tool
         );
         if (toolInvocation && 'result' in toolInvocation) {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            
             const result = toolInvocation.result as any;
             return result.config as { role: string; experience: string; topic: string } | null;
         }

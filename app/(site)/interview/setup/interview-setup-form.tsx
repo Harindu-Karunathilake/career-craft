@@ -21,7 +21,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Play, Loader2, Sparkles, LayoutDashboard, FileText, Upload } from 'lucide-react';
+import { Play, Loader2, Sparkles, LayoutDashboard, FileText } from 'lucide-react';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { firebaseDb, firebaseAuth } from '@/lib/firebase';
 import { toast } from 'sonner';
