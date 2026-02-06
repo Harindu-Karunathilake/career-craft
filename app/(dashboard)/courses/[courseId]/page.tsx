@@ -6,14 +6,14 @@ import { firebaseDb } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Clock, BookOpen, PlayCircle, MonitorPlay } from "lucide-react"
-import Link from "next/link"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
 import { Chapter, Lesson } from "@/types"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ScrollArea } from "@/components/ui/scroll-area"
 
 export default function CourseDetailsPage() {
   const params = useParams()
+  const router = useRouter()
   const { courseId } = params as { courseId: string }
   const [course, setCourse] = useState<any>(null)
   const [loading, setLoading] = useState(true)
@@ -53,8 +53,8 @@ export default function CourseDetailsPage() {
     return (
         <div className="flex flex-col items-center justify-center p-12">
             <h1 className="text-xl font-semibold">Course not found</h1>
-            <Button asChild className="mt-4" variant="outline">
-                <Link href="/tutor/courses">Back to courses</Link>
+            <Button variant="outline" className="mt-4" onClick={() => router.back()}>
+                Go Back
             </Button>
         </div>
     )
@@ -65,11 +65,11 @@ export default function CourseDetailsPage() {
   return (
     <div className="h-[calc(100vh-2rem)] flex flex-col animate-in fade-in-50 duration-500">
       <div className="flex items-center gap-4 mb-4">
-        <Button asChild variant="ghost" size="sm" className="pl-0 hover:pl-2 transition-all">
-            <Link href="/tutor/courses" className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+        <Button variant="ghost" size="sm" className="pl-0 hover:pl-2 transition-all" onClick={() => router.back()}>
+            <span className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
             Back
-            </Link>
+            </span>
         </Button>
         <h1 className="text-2xl font-bold tracking-tight truncate">{course.title}</h1>
       </div>
@@ -197,4 +197,3 @@ export default function CourseDetailsPage() {
     </div>
   )
 }
-
