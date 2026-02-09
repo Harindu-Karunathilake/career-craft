@@ -140,7 +140,7 @@ export default function InterviewFeedbackPage() {
                                 Category Breakdown
                             </h3>
                             <div className="space-y-4">
-                                {feedback.categoryScores.map((cat: any) => (
+                                {feedback.categoryScores && feedback.categoryScores.length > 0 ? feedback.categoryScores.map((cat: any) => (
                                     <div key={cat.name} className="space-y-2">
                                         <div className="flex justify-between text-sm">
                                             <span className="text-zinc-300">{cat.name}</span>
@@ -156,7 +156,7 @@ export default function InterviewFeedbackPage() {
                                         </div>
                                         <p className="text-xs text-zinc-500">{cat.comment}</p>
                                     </div>
-                                ))}
+                                )) : <p className="text-zinc-500 text-sm">No detailed breakdown available.</p>}
                             </div>
                         </Card>
                     </motion.div>
@@ -171,12 +171,12 @@ export default function InterviewFeedbackPage() {
                                 Core Strengths
                             </h3>
                             <ul className="space-y-3">
-                                {feedback.strengths.map((str: string, i: number) => (
+                                {feedback.strengths && feedback.strengths.length > 0 ? feedback.strengths.map((str: string, i: number) => (
                                     <li key={i} className="flex gap-3 text-sm text-zinc-300">
                                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 mt-2 shrink-0" />
                                         {str}
                                     </li>
-                                ))}
+                                )) : <li className="text-sm text-zinc-500">No specific strengths identified.</li>}
                             </ul>
                         </Card>
                     </motion.div>
@@ -189,12 +189,12 @@ export default function InterviewFeedbackPage() {
                                 Areas for Improvement
                             </h3>
                             <ul className="space-y-3">
-                                {feedback.areasForImprovement.map((area: string, i: number) => (
+                                {feedback.areasForImprovement && feedback.areasForImprovement.length > 0 ? feedback.areasForImprovement.map((area: string, i: number) => (
                                     <li key={i} className="flex gap-3 text-sm text-zinc-300">
                                         <span className="h-1.5 w-1.5 rounded-full bg-amber-500 mt-2 shrink-0" />
                                         {area}
                                     </li>
-                                ))}
+                                )) : <li className="text-sm text-zinc-500">No specific improvements identified.</li>}
                             </ul>
                         </Card>
                     </motion.div>

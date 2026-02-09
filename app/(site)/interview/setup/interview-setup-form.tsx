@@ -52,6 +52,7 @@ export default function InterviewSetupForm({
     topic: initialTopic,
     type: 'Technical',
     questionCount: '5',
+    interviewMode: 'voice', // 'voice' | 'coding'
   });
   
   const [resumeFile, setResumeFile] = useState<File | null>(null);
@@ -99,17 +100,32 @@ export default function InterviewSetupForm({
             
             // Generate using Puter JS
             // toast.loading("Generating generic questions relative to your resume...");
-            
-            const prompt = `
+                        const prompt = `
                 You are an expert technical interviewer.
                 I have uploaded a resume for a ${formData.role} position (Experience: ${formData.experience}).
                 Focus Topic: ${formData.topic || 'General'}.
+                Interview Mode: ${formData.interviewMode}
                 
                 Resume Content:
                 ${resumeText.slice(0, 8000)} {/* Truncate to avoid huge context */}
                 
-                Generate ${formData.questionCount} ${formData.type} interview questions based SPECIFICALLY on the projects, skills, and experience in this resume.
-                Ask about specific details found in the resume text.
+                Generate ${formData.questionCount} ${formData.interviewMode === 'coding' ? 'coding problems' : formData.type + ' interview questions'} based SPECIFICALLY on the projects, skills, and experience in this resume.
+                
+                ${formData.interviewMode === 'coding' 
+                    ? `IMPORTANT: The user has selected a LIVE CODING ASSESSMENT. 
+                       Generate ${formData.questionCount} strictly practical CODING CHALLENGES.
+                       
+                       CRITICAL RULES:
+                       1. EVERY question must start with "Write a function...", "Create a component...", or "Implement...".
+                       2. Do NOT ask the user to explain anything.
+                       3. Do NOT ask about their past experience. Use the resume ONLY to identify which LANGUAGES/FRAMEWORKS to use (e.g., if they know React, ask a React coding question).
+                       4. Output PURE PROBLEM STATEMENTS.
+                       
+                       Example Format: "Write a React component that fetches data from an API and displays it in a list with a filter input."
+                       
+                       Forbidden Phrasing: "How would you...", "Explain the difference...", "Describe..."`
+                    : `Ask about specific details found in the resume text. Keep questions conversational.`
+                }
                 
                 ALSO, extract the candidate's Name and a brief 2-sentence professional summary from the resume to give current context to the interviewer.
                 
@@ -122,6 +138,7 @@ export default function InterviewSetupForm({
                 Do not add markdown formatting like \`\`\`json. Just the raw JSON string.
             `;
 
+            console.log("SENDING PROMPT TO AI:", prompt);
             const result = await ai.chat(prompt);
             
             // Parse Puter's response
@@ -158,7 +175,8 @@ export default function InterviewSetupForm({
                     experience: formData.experience,
                     topic: formData.topic || 'General',
                     type: formData.type,
-                    questionCount: formData.questionCount
+                    questionCount: formData.questionCount,
+                    interviewMode: formData.interviewMode // Pass the mode
                 })
             });
 
@@ -177,6 +195,7 @@ export default function InterviewSetupForm({
             experience: formData.experience,
             topic: formData.topic || 'General',
             type: formData.type,
+            interviewMode: formData.interviewMode, // Save the selected mode
             questions: questions,
             resumeContext: {
                 candidateName: (questions as any).candidateName || "Candidate",
@@ -259,24 +278,47 @@ export default function InterviewSetupForm({
           />
         </div>
 
-        {/* Interview Type */}
+        {/* Interview Mode */}
         <div className="space-y-2">
-          <Label htmlFor="type" className="text-white">Interview Type</Label>
-          <Select 
-            value={formData.type} 
-            onValueChange={(value) => setFormData({ ...formData, type: value })}
-            required
-          >
-            <SelectTrigger className="bg-black/40 border-white/10 text-white focus:ring-indigo-500/50">
-              <SelectValue placeholder="Select type" />
-            </SelectTrigger>
-            <SelectContent className="bg-zinc-900 border-white/10 text-white">
-              <SelectItem value="Technical">Technical</SelectItem>
-              <SelectItem value="Behavioral">Behavioral</SelectItem>
-              <SelectItem value="Mixed">Mixed</SelectItem>
-            </SelectContent>
-          </Select>
+            <Label className="text-white">Interview Mode</Label>
+            <div className="grid grid-cols-2 gap-4">
+                <div 
+                    onClick={() => setFormData({ ...formData, interviewMode: 'voice' })}
+                    className={`cursor-pointer border rounded-lg p-4 flex flex-col items-center gap-2 transition-all ${formData.interviewMode === 'voice' ? 'bg-indigo-600/20 border-indigo-500 text-white' : 'bg-black/40 border-white/10 text-zinc-400 hover:bg-white/5'}`}
+                >
+                    <span className="text-lg font-semibold">Voice Interview</span>
+                    <span className="text-xs text-center opacity-70">Real-time conversational interview with AI avatar</span>
+                </div>
+                <div 
+                    onClick={() => setFormData({ ...formData, interviewMode: 'coding' })}
+                    className={`cursor-pointer border rounded-lg p-4 flex flex-col items-center gap-2 transition-all ${formData.interviewMode === 'coding' ? 'bg-indigo-600/20 border-indigo-500 text-white' : 'bg-black/40 border-white/10 text-zinc-400 hover:bg-white/5'}`}
+                >
+                    <span className="text-lg font-semibold">Live Coding</span>
+                    <span className="text-xs text-center opacity-70">Interactive code editor with AI evaluation</span>
+                </div>
+            </div>
         </div>
+
+        {/* Interview Type - Hidden for Coding Mode */}
+        {formData.interviewMode !== 'coding' && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+            <Label htmlFor="type" className="text-white">Question Type</Label>
+            <Select 
+                value={formData.type} 
+                onValueChange={(value) => setFormData({ ...formData, type: value })}
+                required
+            >
+                <SelectTrigger className="bg-black/40 border-white/10 text-white focus:ring-indigo-500/50">
+                <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent className="bg-zinc-900 border-white/10 text-white">
+                <SelectItem value="Technical">Technical</SelectItem>
+                <SelectItem value="Behavioral">Behavioral</SelectItem>
+                <SelectItem value="Mixed">Mixed</SelectItem>
+                </SelectContent>
+            </Select>
+            </div>
+        )}
 
         {/* Experience Level */}
         <div className="space-y-2">
@@ -331,25 +373,27 @@ export default function InterviewSetupForm({
           </Select>
         </div>
 
-        {/* Resume Upload */}
-        <div className="space-y-2">
-            <Label htmlFor="resume" className="text-white flex items-center gap-2">
-                <FileText className="h-4 w-4" />
-                Upload Resume (Optional)
-            </Label>
-            <div className="flex items-center gap-4">
-                 <Input 
-                    id="resume"
-                    type="file"
-                    accept=".pdf"
-                    onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-                    className="bg-black/40 border-white/10 text-white file:text-indigo-400 file:border-0 file:bg-transparent file:font-semibold"
-                 />
+        {/* Resume Upload - Hidden for Coding Mode */}
+        {formData.interviewMode !== 'coding' && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2 duration-300">
+                <Label htmlFor="resume" className="text-white flex items-center gap-2">
+                    <FileText className="h-4 w-4" />
+                    Upload Resume (Optional)
+                </Label>
+                <div className="flex items-center gap-4">
+                    <Input 
+                        id="resume"
+                        type="file"
+                        accept=".pdf"
+                        onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+                        className="bg-black/40 border-white/10 text-white file:text-indigo-400 file:border-0 file:bg-transparent file:font-semibold"
+                    />
+                </div>
+                <p className="text-xs text-zinc-500">
+                    Upload your resume (PDF) to get tailored questions based on your actual experience.
+                </p>
             </div>
-            <p className="text-xs text-zinc-500">
-                Upload your resume (PDF) to get tailored questions based on your actual experience.
-            </p>
-        </div>
+        )}
 
         <div className="pt-4">
              <Button 

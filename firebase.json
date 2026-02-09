@@ -1,0 +1,35 @@
+{
+    "functions": [
+        {
+            "source": "functions",
+            "codebase": "default",
+            "ignore": [
+                "node_modules",
+                ".git",
+                "firebase-debug.log",
+                "firebase-debug.*.log"
+            ],
+            "predeploy": [
+                "npm --prefix \"$RESOURCE_DIR\" run build"
+            ]
+        }
+    ],
+    "emulators": {
+        "functions": {
+            "host": "127.0.0.1",
+            "port": 5001
+        },
+        "firestore": {
+            "host": "127.0.0.1",
+            "port": 8081
+        },
+        "auth": {
+            "host": "127.0.0.1",
+            "port": 9099
+        },
+        "ui": {
+            "enabled": true
+        },
+        "singleProjectMode": true
+    }
+}
