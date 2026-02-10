@@ -18,6 +18,8 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     const [loading, setLoading] = useState(true);
     const [messages, setMessages] = useState<any[]>(interviewData.messages || []);
     const [code, setCode] = useState(interviewData.code || "// Write your solution here\n");
+    // Use state to store the fallback start time so it remains constant across renders
+    const [fallbackStartTime] = useState(() => Date.now());
 
     useEffect(() => {
         const userId = firebaseAuth.currentUser?.uid;
@@ -50,9 +52,9 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                     setMessages(data.messages);
                 }
             }
+            setLoading(false);
         });
 
-        setLoading(false);
         return () => unsubscribe();
     }, [sessionId]);
 
@@ -109,7 +111,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                  <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-[#252526]">
                     <div className="flex items-center gap-4">
                         <div className="text-sm font-medium text-white/80">Main.js</div>
-                        <Timer startTime={interviewData.createdAt?.seconds ? interviewData.createdAt.seconds * 1000 : Date.now()} />
+                        <Timer startTime={interviewData.createdAt?.seconds ? interviewData.createdAt.seconds * 1000 : fallbackStartTime} />
                     </div>
                     <div className="flex items-center gap-4">
                          <div className="text-xs text-white/40">Auto-saving...</div>

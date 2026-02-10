@@ -2,9 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Loader2, Play, Bot, User } from "lucide-react";
+import { Loader2, Play, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { httpsCallable } from "firebase/functions";
 import { firebaseFunctions } from "@/lib/firebase"; // Ensure this exports 'functions' instance
@@ -24,7 +23,6 @@ interface ChatInterfaceProps {
 }
 
 export default function ChatInterface({ sessionId, messages, currentCode, status }: ChatInterfaceProps) {
-    const [input, setInput] = useState("");
     const [loading, setLoading] = useState(false);
     const scrollRef = useRef<HTMLDivElement>(null);
 

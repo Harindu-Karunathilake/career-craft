@@ -84,7 +84,7 @@ export async function generateFeedback(
     }
 }
 
-export async function generateQuestion(_role: string, _experience: string, _topic?: string): Promise<string> {
+export async function generateQuestion(): Promise<string> {
     // Helper to generate the initial question if needed by backend, 
     // though currently frontend handles generic question generation via /api/interview/generate.
     // This connects to the same logic if we move it to Cloud Functions.

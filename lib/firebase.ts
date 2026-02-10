@@ -64,7 +64,6 @@ export const firebaseFunctions = getFunctions(firebaseApp)
 // Wrap in try-catch to handle "already connected" or other init issues safely
 if (process.env.NEXT_PUBLIC_USE_EMULATORS === "true") {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const globalAny: any = global;
 
     // Use a global flag to prevent double-connection in HMR (Hot Module Replacement)

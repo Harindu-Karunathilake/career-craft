@@ -3,7 +3,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Bot, PhoneOff, Mic, MicOff, Loader2 } from "lucide-react"
+import { Bot, PhoneOff, Mic, MicOff } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { vapi } from "@/lib/vapi.sdk"
@@ -39,40 +39,17 @@ export default function VoiceInterviewSession({ sessionId, interviewData }: Voic
     const [lastMessage, setLastMessage] = useState<string>("");
     const [isMuted, setIsMuted] = useState(false);
 
-    useEffect(() => {
-        // Start call immediately on mount since we have data
-        startCall(interviewData);
-
-        const onCallStart = () => setCallStatus(CallStatus.ACTIVE);
-        const onCallEnd = () => setCallStatus(CallStatus.FINISHED);
-        
-        const onMessage = (message: any) => {
-            if (message.type === "transcript" && message.transcriptType === "final") {
-                const newMessage = { role: message.role, content: message.transcript };
-                setMessages((prev) => [...prev, newMessage]);
-                setLastMessage(message.transcript);
-            }
-        };
-
-        const onSpeechStart = () => setIsSpeaking(true);
-        const onSpeechEnd = () => setIsSpeaking(false);
-        const onError = (error: any) => {
-            console.error("Vapi Error RAW:", error);
-        };
-
-        vapi.on("call-start", onCallStart);
-        vapi.on("call-end", onCallEnd);
-        vapi.on("message", onMessage);
-        vapi.on("speech-start", onSpeechStart);
-        vapi.on("speech-end", onSpeechEnd);
-        vapi.on("error", onError);
-
-        return () => {
-            vapi.stop(); 
-            vapi.removeAllListeners();
-        };
-    }, []);
-
+    // Use useCallback to prevent infinite loop in dependencies or move inside useEffect
+    // Since startCall depends on interviewData which is a prop, we can define it inside or outside with useCallback.
+    // However, it also uses setCallStatus, etc.
+    
+    // We'll hoist the function definitions or move them inside useEffect. 
+    // Given the size, defining them before useEffect is cleaner but they use state setters.
+    // Actually, looking at the structure, it's better to move the effect that starts the call to AFTER the functions are defined,
+    // or use a ref mechanism if we want to avoid complex dependency arrays, but standard way is defining functions then effect.
+    
+    // Moving the functions up.
+    
     const startCall = async (data: any) => {
         const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
         if (!token) {
@@ -145,6 +122,44 @@ export default function VoiceInterviewSession({ sessionId, interviewData }: Voic
             setCallStatus(CallStatus.INACTIVE);
         }
     };
+    
+    
+    useEffect(() => {
+        // Start call immediately on mount since we have data
+        startCall(interviewData);
+
+        const onCallStart = () => setCallStatus(CallStatus.ACTIVE);
+        const onCallEnd = () => setCallStatus(CallStatus.FINISHED);
+        
+        const onMessage = (message: any) => {
+            if (message.type === "transcript" && message.transcriptType === "final") {
+                const newMessage = { role: message.role, content: message.transcript };
+                setMessages((prev) => [...prev, newMessage]);
+                setLastMessage(message.transcript);
+            }
+        };
+
+        const onSpeechStart = () => setIsSpeaking(true);
+        const onSpeechEnd = () => setIsSpeaking(false);
+        const onError = (error: any) => {
+            console.error("Vapi Error RAW:", error);
+        };
+
+        vapi.on("call-start", onCallStart);
+        vapi.on("call-end", onCallEnd);
+        vapi.on("message", onMessage);
+        vapi.on("speech-start", onSpeechStart);
+        vapi.on("speech-end", onSpeechEnd);
+        vapi.on("error", onError);
+
+        return () => {
+            vapi.stop(); 
+            vapi.removeAllListeners();
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Keep empty dependency to run only once on mount, explicit disable is better than missing warning
+
+
 
     const endCall = async () => {
         vapi.stop();

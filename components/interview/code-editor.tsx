@@ -1,18 +1,15 @@
 "use client";
 
 import { Editor } from "@monaco-editor/react";
-import { useEffect, useState, useCallback } from "react";
-import { debounce } from "lodash"; 
-// Note: Lodash might not be installed, I'll check or implement simple debounce.
-// I'll implement a simple debounce to avoid dependency issues if not present.
+import { useState } from "react";
 
 interface CodeEditorProps {
     initialCode: string;
-    sessionId: string;
+    sessionId?: string; // Kept as optional if needed by interface, but removed from usage
     onChange: (code: string) => void;
 }
 
-export default function CodeEditor({ initialCode, sessionId, onChange }: CodeEditorProps) {
+export default function CodeEditor({ initialCode, onChange }: CodeEditorProps) {
     const [value, setValue] = useState(initialCode);
 
     const handleEditorChange = (value: string | undefined) => {
