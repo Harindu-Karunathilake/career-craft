@@ -4,20 +4,20 @@ import { useChat } from '@ai-sdk/react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Bot, User, Send, Play } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import { Bot, Send, Play } from 'lucide-react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 
 export default function ChatInterface() {
   const router = useRouter();
   const scrollRef = useRef<HTMLDivElement>(null);
-  const [interviewConfig, setInterviewConfig] = useState<{ role: string; experience: string; topic: string } | null>(null);
   const [localInput, setLocalInput] = useState('');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    // eslint-disable-next-line
+    setMounted(true); 
   }, []);
 
   const {
@@ -34,9 +34,9 @@ export default function ChatInterface() {
     },
   } as any) as any;
 
-  // Watch for tool results
-  useEffect(() => {
-    if (!messages.length) return;
+  // Derive interview config from messages
+  const interviewConfig = useMemo(() => {
+    if (!messages.length) return null;
     const lastMessage = messages[messages.length - 1];
     
     if (lastMessage?.toolInvocations) {
@@ -44,12 +44,12 @@ export default function ChatInterface() {
             (tool: any) => tool.toolName === 'generateInterview' && 'result' in tool
         );
         if (toolInvocation && 'result' in toolInvocation) {
+            
             const result = toolInvocation.result as any;
-            if (result.config) {
-                 setInterviewConfig(result.config);
-            }
+            return result.config as { role: string; experience: string; topic: string } | null;
         }
     }
+    return null;
   }, [messages]);
 
   // Scroll to bottom on new messages
@@ -76,7 +76,6 @@ export default function ChatInterface() {
       const content = localInput;
       setLocalInput(''); // Clear immediately for better UX
       
-      // Attempting to use sendMessage since append is missing
       await sendMessage({
           role: 'user',
           content,
@@ -114,7 +113,7 @@ export default function ChatInterface() {
              {messages.length === 0 && (
                 <div className="text-center text-muted-foreground p-8 flex flex-col items-center gap-4">
                      <Bot className="h-12 w-12 opacity-50" />
-                     <p>Say "Hi" to get started!</p>
+                     <p>Say &quot;Hi&quot; to get started!</p>
                 </div>
             )}
           {messages.map((m: any) => (
@@ -178,7 +177,7 @@ export default function ChatInterface() {
        )}
         {interviewConfig && (
             <div className="p-4 border-t border-white/10 bg-emerald-500/10 text-emerald-200 text-center text-sm">
-                Interview configured! Click "Start Interview" to begin.
+                Interview configured! Click &quot;Start Interview&quot; to begin.
             </div>
         )}
     </Card>

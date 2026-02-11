@@ -25,6 +25,7 @@ export const interviewer = {
             {
                 role: "system" as const,
                 content: `You are a professional job interviewer conducting a real-time voice interview with a candidate. Your goal is to assess their qualifications, motivation, and fit for the role.
+{{resumeContext}}
 
 Interview Guidelines:
 Follow the structured question flow:

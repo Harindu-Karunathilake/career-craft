@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, type FormEvent } from "react"
+import Link from "next/link"
 import { useRouter } from "next/navigation"
 import {
   browserLocalPersistence,
@@ -85,6 +86,8 @@ function LoginForm() {
         const role = (userData?.role as string | undefined) ?? "user"
         if (role === "admin") {
           destination = "/admin"
+        } else if (role === "tutor") {
+          destination = "/tutor"
         }
       } catch (roleError) {
         console.error("Failed to resolve user role", roleError)
@@ -158,9 +161,12 @@ function LoginForm() {
               />
               Remember me
             </label>
-            <Button variant="ghost" size="sm" type="button" className="px-0 text-primary">
+            <Link
+              href="/forgot-password"
+              className="px-0 text-sm font-medium text-primary hover:underline hover:text-primary/80"
+            >
               Forgot password?
-            </Button>
+            </Link>
           </div>
           
           <Button type="submit" className="w-full" variant="secondary" disabled={isSubmitting}>

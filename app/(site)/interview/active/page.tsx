@@ -4,7 +4,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Bot, PhoneOff, Mic, MicOff } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { vapi } from "@/lib/vapi.sdk"
 import { interviewer } from "@/constants/interview"
@@ -25,7 +25,7 @@ interface SavedMessage {
   content: string;
 }
 
-export default function ActiveInterviewPage() {
+function InterviewContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const role = searchParams.get("role") || "Software Engineer";
@@ -39,9 +39,37 @@ export default function ActiveInterviewPage() {
     const [lastMessage, setLastMessage] = useState<string>("");
     const [isMuted, setIsMuted] = useState(false);
 
+    const startCall = async () => {
+        const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
+        if (!token) {
+            console.error("Missing NEXT_PUBLIC_VAPI_WEB_TOKEN");
+            alert("Configuration Error: Missing Vapi Web Token. Please check your .env file.");
+            return;
+        }
+
+        setCallStatus(CallStatus.CONNECTING);
+        try {
+            console.log("Starting Vapi call with token:", token.slice(0, 5) + "...");
+            await vapi.start(interviewer);
+        } catch (err: any) {
+            console.error("Failed to start call", err);
+            console.error("Error details:", JSON.stringify(err, null, 2));
+            alert(`Failed to start interview: ${err.message || JSON.stringify(err)}`);
+            setCallStatus(CallStatus.INACTIVE);
+        }
+    };
+
+    const endCall = async () => {
+        vapi.stop();
+        setCallStatus(CallStatus.FINISHED);
+        await handleGenerateFeedback();
+    };
+
     useEffect(() => {
         // Auto-start call on mount
-        startCall();
+        setTimeout(() => {
+            startCall();
+        }, 0);
         
         const onCallStart = () => setCallStatus(CallStatus.ACTIVE);
         const onCallEnd = () => setCallStatus(CallStatus.FINISHED);
@@ -71,31 +99,7 @@ export default function ActiveInterviewPage() {
         };
     }, []);
 
-    const startCall = async () => {
-        const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
-        if (!token) {
-            console.error("Missing NEXT_PUBLIC_VAPI_WEB_TOKEN");
-            alert("Configuration Error: Missing Vapi Web Token. Please check your .env file.");
-            return;
-        }
 
-        setCallStatus(CallStatus.CONNECTING);
-        try {
-            console.log("Starting Vapi call with token:", token.slice(0, 5) + "...");
-            await vapi.start(interviewer);
-        } catch (err: any) {
-            console.error("Failed to start call", err);
-            console.error("Error details:", JSON.stringify(err, null, 2));
-            alert(`Failed to start interview: ${err.message || JSON.stringify(err)}`);
-            setCallStatus(CallStatus.INACTIVE);
-        }
-    };
-
-    const endCall = async () => {
-        vapi.stop();
-        setCallStatus(CallStatus.FINISHED);
-        await handleGenerateFeedback();
-    };
 
     const toggleMute = () => {
         const newMutedState = !isMuted;
@@ -217,4 +221,12 @@ export default function ActiveInterviewPage() {
             </div>
         </main>
     );
+}
+
+export default function ActiveInterviewPage() {
+  return (
+    <Suspense fallback={<div className="flex h-screen w-full items-center justify-center text-white">Loading interview...</div>}>
+      <InterviewContent />
+    </Suspense>
+  )
 }

@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
 
         const result = streamText({
-            model: google('gemini-1.5-flash'),
+            model: google('gemini-2.5-flash'),
             messages,
             system: `You are a friendly and professional interviewer assistant for CareerCraft. 
         Your goal is to help the user set up a mock interview session.

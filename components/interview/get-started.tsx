@@ -1,33 +1,56 @@
+"use client"
+
 import React from 'react'
-import { BackgroundRippleEffect } from "@/components/ui/background-ripple-effect";
+import { motion } from "framer-motion"
+// import { BackgroundRippleEffect } from "@/components/ui/background-ripple-effect";
 import { Button } from '../ui/button';
 import Link from "next/link"
 
-
 const GetStarted = () => {
   return (
-          <main className="min-h-screen bg-[radial-gradient(circle_at_top,rgba(99,102,241,0.25),transparent_60%)] relative flex flex-1 w-full items-center justify-center     text-center  ">
-            <div className=" pointer-events-none absolute inset-0 " aria-hidden="true" />
-            <BackgroundRippleEffect rows={10} cols={100} cellSize={48} />
-            <div
-              className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(0,0,0,0)_45%,rgba(0,0,0,0.85)_85%)]"
-              aria-hidden="true"
-            />
-            <div className=" mb-10 relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center gap-6">
-            <p className="text-xs font-semibold uppercase tracking-[0.35em] text-primary">
+    <main className="min-h-screen relative flex flex-1 w-full items-center justify-center text-center overflow-hidden">
+        {/* Background Effects - REMOVED (Global) */}
+
+        {/* Content */}
+        <div className="mb-10 relative z-10 mx-auto flex w-full max-w-4xl flex-col items-center gap-6 px-6">
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              className="text-xs font-semibold uppercase tracking-[0.35em] text-indigo-400"
+            >
               Interviews
-            </p>
-            <h1 className="text-4xl font-semibold leading-tight text-zinc-50 sm:text-5xl">
-              Create your personalized interviews
-            </h1>
-              <p className="text-lg text-muted-foreground">
+            </motion.p>
+            <motion.h1 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.1 }}
+              className="text-4xl font-semibold leading-tight text-white sm:text-6xl"
+            >
+              Create your personalized <br className="hidden sm:block" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-purple-400">
+                interviews
+              </span>
+            </motion.h1>
+            <motion.p 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-lg text-zinc-400 max-w-2xl"
+            >
                 Get started by creating interviews tailored to your job application using our AI agents. Customize your interview based on number of questions, difficulty, and topics.
-              </p>
-                <Button asChild size="sm" className="min-w-24" variant="default">
-                        <Link href="/interview/setup">Create Interview</Link>
-                    </Button>
-            </div>
-          </main>
+            </motion.p>
+            <motion.div
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ duration: 0.6, delay: 0.3 }}
+            >
+                <Button asChild size="lg" className="h-12 px-8 text-base bg-white text-black hover:bg-zinc-200">
+                    <Link href="/interview/setup">Create Interview</Link>
+                </Button>
+            </motion.div>
+        </div>
+    </main>
   )
 }
 

@@ -2,7 +2,6 @@
 
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
 import { ArrowLeft, CheckCircle, AlertCircle, Sparkles } from "lucide-react"
 import Link from "next/link"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
@@ -11,46 +10,58 @@ import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Image from "next/image"
 
+import { motion } from "framer-motion"
+
 export default function ResumeResultPage() {
   const { id } = useParams();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [displayImageUrl, setDisplayImageUrl] = useState<string>("");
 
   useEffect(() => {
     const fetchData = async () => {
         if (!id) return;
         try {
-            // Need to wait for auth? 
-            // Better to assume auth is persistent or wait for it.
-            // For simplicity, we'll try to fetch. If rules require auth, it might fail if not loaded.
             
-            // Wait for auth state change if needed?
-            // In a real app we'd use an AuthProvider or similar.
-            // Let's polling for currentUser for a moment if null?
-            
-            const userId = firebaseAuth.currentUser?.uid;
-            if (!userId) {
-                // If checking from a fresh load, might duplicate logic.
-                // Assuming client-side hydration has auth.
-                // Let's just try.
-            }
-
-             // We need to listen to auth state to get userId reliably on refresh
+            // Wait for auth state change to get userId reliably
              const unsubscribe = firebaseAuth.onAuthStateChanged(async (user) => {
                  if (user) {
                      const docRef = doc(firebaseDb, "users", user.uid, "resumes", id as string);
                      const docSnap = await getDoc(docRef);
                      
                      if (docSnap.exists()) {
-                         setData(docSnap.data());
+                         const resumeData = docSnap.data();
+                         setData(resumeData);
+
+                         // Handle Image URL (Encrypted vs Public)
+                         if (resumeData.isEncrypted && resumeData.imageUrl) {
+                             try {
+                                 const token = await user.getIdToken();
+                                 const res = await fetch(`/api/resumes/${id}/download?target=preview`, {
+                                     headers: { "Authorization": `Bearer ${token}` }
+                                 });
+                                 if (res.ok) {
+                                     const blob = await res.blob();
+                                     const objUrl = URL.createObjectURL(blob);
+                                     setDisplayImageUrl(objUrl);
+                                 } else {
+                                     const errText = await res.text();
+                                     console.error("Failed to load encrypted preview:", res.status, errText);
+                                 }
+                             } catch (e) {
+                                 console.error("Error loading preview:", e);
+                             }
+                         } else {
+                             // Legacy or public
+                             setDisplayImageUrl(resumeData.imageUrl);
+                         }
                      } else {
                          setError("Resume analysis not found.");
                      }
                      setLoading(false);
                  } else {
                     setLoading(false); 
-                    // Redirect to login?
                  }
              });
              
@@ -63,43 +74,77 @@ export default function ResumeResultPage() {
     fetchData();
   }, [id]);
 
+  // Cleanup object URL
+  useEffect(() => {
+      return () => {
+          if (displayImageUrl && displayImageUrl.startsWith("blob:")) {
+              URL.revokeObjectURL(displayImageUrl);
+          }
+      }
+  }, [displayImageUrl]);
+
   if (loading) return (
       <div className="min-h-screen bg-black flex items-center justify-center text-white">
-          Loading results...
+          <div className="flex flex-col items-center gap-4">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-indigo-500 border-t-transparent" />
+              <p className="text-zinc-400">Loading results...</p>
+          </div>
       </div>
   );
 
   if (error || !data) return (
        <div className="min-h-screen bg-black flex items-center justify-center text-white flex-col gap-4">
-          <p>{error || "No data found"}</p>
-          <Link href="/resume/analyze"><Button>Try Again</Button></Link>
+          <p className="text-red-400">{error || "No data found"}</p>
+          <Link href="/resume/analyze"><Button variant="secondary">Try Again</Button></Link>
       </div>
   );
   
-  const { analysis, imageUrl, companyName, jobTitle } = data;
+  const { analysis, companyName, jobTitle } = data;
+
+  const containerVariants: any = {
+      hidden: { opacity: 0 },
+      visible: {
+          opacity: 1,
+          transition: { staggerChildren: 0.1 }
+      }
+  };
+
+  const itemVariants: any = {
+      hidden: { opacity: 0, y: 20 },
+      visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
+  };
 
   return (
-    <main className="min-h-screen bg-black text-white p-6 md:p-12">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <main className="min-h-screen bg-black text-white p-6 md:p-12 relative overflow-hidden">
+        {/* Background Effects */}
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(99,102,241,0.1),transparent_50%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,rgba(16,185,129,0.1),transparent_50%)]" />
+
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="max-w-7xl mx-auto space-y-8 relative z-10"
+      >
         
         {/* Nav */}
-        <div className="flex items-center gap-4">
+        <motion.div variants={itemVariants} className="flex items-center gap-4">
             <Link href="/user/resume">
-                <Button variant="ghost" className="text-white hover:bg-white/10">
+                <Button variant="ghost" className="text-white hover:bg-white/10 pl-0 hover:pl-2 transition-all">
                     <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
                 </Button>
             </Link>
-        </div>
+        </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-8">
             {/* Left: Resume Preview */}
-            <div className="space-y-6">
-                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4 md:p-8 h-[calc(100vh-12rem)] sticky top-24 overflow-auto scrollbar-thin scrollbar-thumb-white/20">
+            <motion.div variants={itemVariants} className="space-y-6">
+                 <div className="bg-white/5 border border-white/10 rounded-2xl p-4 md:p-8 h-[calc(100vh-12rem)] sticky top-24 overflow-auto scrollbar-thin scrollbar-thumb-white/20 backdrop-blur-sm">
                     <h2 className="text-xl font-semibold mb-4 text-white/80">Analyzed Resume</h2>
-                    {imageUrl ? (
+                    {displayImageUrl ? (
                         <div className="relative w-full h-full min-h-[500px]">
                             <Image 
-                                src={imageUrl} 
+                                src={displayImageUrl} 
                                 alt="Resume Preview" 
                                 width={800} 
                                 height={1000}
@@ -112,15 +157,20 @@ export default function ResumeResultPage() {
                         </div>
                     )}
                  </div>
-            </div>
+            </motion.div>
 
             {/* Right: Analysis */}
-            <div className="space-y-8">
+            <motion.div variants={itemVariants} className="space-y-8">
                 <div>
-                     <h1 className="text-3xl font-bold">{jobTitle} @ {companyName}</h1>
-                     <div className="flex items-center gap-2 mt-2">
-                        <span className="text-4xl font-bold text-indigo-400">{analysis?.overallScore}/100</span>
-                        <span className="text-sm text-muted-foreground">Overall AI Score</span>
+                     <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white to-gray-400">{jobTitle}</h1>
+                     <p className="text-lg text-indigo-400 font-medium">@ {companyName}</p>
+                     
+                     <div className="flex items-center gap-4 mt-6 p-4 rounded-xl bg-white/5 border border-white/10 backdrop-blur-md">
+                        <span className="text-5xl font-bold text-emerald-400">{analysis?.overallScore}</span>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-semibold text-white">Overall Match Score</span>
+                            <span className="text-xs text-white/50">Based on AI analysis</span>
+                        </div>
                      </div>
                 </div>
 
@@ -132,20 +182,22 @@ export default function ResumeResultPage() {
                          { label: "Structure & Format", score: analysis?.structure?.score },
                          { label: "Keywords & Skills", score: analysis?.skills?.score },
                      ].map((item) => (
-                         <div key={item.label} className="bg-white/5 p-4 rounded-xl border border-white/10">
+                         <div key={item.label} className="bg-white/5 p-4 rounded-xl border border-white/10 hover:bg-white/10 transition-colors">
                              <div className="text-sm text-gray-400">{item.label}</div>
-                             <div className="text-2xl font-semibold mt-1">{item.score}%</div>
-                             <div className="h-2 w-full bg-white/10 rounded-full mt-2 overflow-hidden">
-                                 <div 
-                                    className="h-full bg-indigo-500 rounded-full transition-all" 
-                                    style={{ width: `${item.score}%` }}
+                             <div className="text-2xl font-semibold mt-1 text-white">{item.score}%</div>
+                             <div className="h-1.5 w-full bg-white/10 rounded-full mt-2 overflow-hidden">
+                                 <motion.div 
+                                    initial={{ width: 0 }}
+                                    whileInView={{ width: `${item.score}%` }}
+                                    transition={{ duration: 1, ease: "easeOut" }}
+                                    className="h-full bg-indigo-500 rounded-full" 
                                  />
                              </div>
                          </div>
                      ))}
                 </div>
 
-                <Separator className="bg-white/10" />
+                <div className="w-full h-px bg-white/10" />
 
                 {/* Detailed Feedback */}
                 <div className="space-y-6">
@@ -154,9 +206,9 @@ export default function ResumeResultPage() {
                     <FeedbackSection title="Content Quality" tips={analysis?.content?.tips} />
                     <FeedbackSection title="Skills Analysis" tips={analysis?.skills?.tips} />
                 </div>
-            </div>
+            </motion.div>
         </div>
-      </div>
+      </motion.div>
     </main>
   );
 }

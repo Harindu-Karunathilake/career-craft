@@ -198,7 +198,10 @@ export default function AdminUsersPage() {
                         disabled={actionUserId === user.id}
                       >
                         <option value="user" className="text-black">
-                          User
+                          Candidate
+                        </option>
+                        <option value="tutor" className="text-black">
+                          Tutor
                         </option>
                         <option value="admin" className="text-black">
                           Admin

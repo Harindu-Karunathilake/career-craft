@@ -10,7 +10,21 @@ export default function UserDashboardLayout({
   children: ReactNode
 }) {
   return (
-    <SidebarProvider>
+    <SidebarProvider className="user-dashboard-theme">
+      <style dangerouslySetInnerHTML={{ __html: `
+        .user-dashboard-theme {
+          --primary: oklch(0.623 0.17 290);
+          --ring: oklch(0.623 0.17 290);
+          --sidebar-primary: oklch(0.623 0.17 290);
+          --sidebar-ring: oklch(0.623 0.17 290);
+        }
+        .dark .user-dashboard-theme {
+          --primary: oklch(0.623 0.17 290);
+          --ring: oklch(0.623 0.17 290);
+          --sidebar-primary: oklch(0.623 0.17 290);
+          --sidebar-ring: oklch(0.623 0.17 290);
+        }
+      `}} />
       <UserSidebar />
       <SidebarInset className="bg-background text-foreground">
         <header className="sticky top-0 z-10 glass flex flex-wrap items-center justify-between gap-4 border-b px-6 py-4">
