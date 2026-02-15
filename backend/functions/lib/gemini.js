@@ -68,7 +68,7 @@ async function generateFeedback(problemContext, userCode, executionResult) {
     }
 }
 exports.generateFeedback = generateFeedback;
-async function generateQuestion(_role, _experience, _topic) {
+async function generateQuestion() {
     // Helper to generate the initial question if needed by backend, 
     // though currently frontend handles generic question generation via /api/interview/generate.
     // This connects to the same logic if we move it to Cloud Functions.

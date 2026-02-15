@@ -1,0 +1,12 @@
+{
+    "name": "career-craft-backend",
+    "version": "1.0.0",
+    "private": true,
+    "scripts": {
+        "dev": "firebase emulators:start",
+        "start": "firebase emulators:start",
+        "deploy": "firebase deploy --only functions"
+    },
+    "dependencies": {},
+    "devDependencies": {}
+}

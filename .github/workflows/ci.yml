@@ -18,15 +18,25 @@ jobs:
       with:
         node-version: '20'
         cache: 'npm'
+        cache-dependency-path: |
+          frontend/package-lock.json
+          backend/package-lock.json
 
-    - name: Install dependencies
-      run: npm ci
+    # Frontend Steps
+    - name: Install Frontend Dependencies
+      run: |
+        cd frontend
+        npm ci
 
-    - name: Run Lint
-      run: npm run lint
+    - name: Lint Frontend
+      run: |
+        cd frontend
+        npm run lint
 
-    - name: Build Application
-      run: npm run build
+    - name: Build Frontend
+      run: |
+        cd frontend
+        npm run build
       env:
         # Dummy values for build-time validation if configured
         NEXT_PUBLIC_VAPI_WEB_TOKEN: "dummy"
@@ -40,3 +50,19 @@ jobs:
         FIREBASE_PROJECT_ID: "dummy"
         FIREBASE_CLIENT_EMAIL: "dummy@example.com"
         FIREBASE_PRIVATE_KEY: "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0\n-----END PRIVATE KEY-----\n"
+
+    # Backend Steps
+    - name: Install Backend Dependencies
+      run: |
+        cd backend/functions
+        npm ci
+
+    - name: Lint Backend
+      run: |
+        cd backend/functions
+        npm run lint
+
+    - name: Build Backend Functions
+      run: |
+        cd backend/functions
+        npm run build
