@@ -38,7 +38,7 @@ export default function ResumeResultPage() {
                          if (resumeData.isEncrypted && resumeData.imageUrl) {
                              try {
                                  const token = await user.getIdToken();
-                                 const res = await fetch(`/api/resumes/${id}/download?target=preview`, {
+                                 const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/resumes/${id}/download?target=preview`, {
                                      headers: { "Authorization": `Bearer ${token}` }
                                  });
                                  if (res.ok) {

@@ -85,7 +85,7 @@ export function JobsList() {
                 queryParams.set("page", apiPage.toString());
                 queryParams.set("sort_by", "relevance");
 
-                const res = await fetch(`/api/jobs?${queryParams.toString()}`);
+                const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/jobs?${queryParams.toString()}`);
                 if (!res.ok) throw new Error("Failed to fetch jobs");
                 
                 const data: JobsResponse = await res.json();

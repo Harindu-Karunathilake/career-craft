@@ -73,7 +73,7 @@ export default function InterviewSetupForm({
     try {
         // 0. Validate Role
         if (!isAutoStart) { // Skip validation for auto-start or validate there too if needed, but usually user input needs validation
-            const validationResponse = await fetch('/api/validate-role', {
+            const validationResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/validate-role`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ role: formData.role })
@@ -167,7 +167,7 @@ export default function InterviewSetupForm({
 
         } else {
              // Standard Generation
-            const response = await fetch('/api/interview/generate', {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/interview/generate`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({

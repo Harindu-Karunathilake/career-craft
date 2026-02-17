@@ -1,0 +1,27 @@
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_USE_EMULATORS=true
+      # Map other necessary environment variables here or use an env_file
+      # For production-like local testing, passing credentials might be needed
+    depends_on:
+      - backend
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    ports:
+      - "4000:4000" # Emulator Suite UI
+      - "5001:5001" # Functions
+      - "8081:8081" # Firestore
+      - "9099:9099" # Auth
+    environment:
+      - FIREBASE_PROJECT_ID=career-craft-ac840
+      # Pass GCP credentials if functions interact with real Google Cloud services
+      # - GOOGLE_APPLICATION_CREDENTIALS=/app/service-account.json

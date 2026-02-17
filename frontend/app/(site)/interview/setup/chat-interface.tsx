@@ -26,7 +26,7 @@ export default function ChatInterface() {
     error,
     sendMessage,
   } = useChat({
-    api: '/api/chat',
+    api: `${process.env.NEXT_PUBLIC_API_URL}/chat`,
     maxSteps: 5,
     onError: (error: any) => {
         console.error('Chat error:', error);

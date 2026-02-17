@@ -58,7 +58,7 @@ export function RecommendedJobs() {
         setError(null);
 
         try {
-            const apiResponse = await fetch("/api/job-recommendations", {
+            const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/job-recommendations`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ userId: user.uid }),

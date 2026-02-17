@@ -117,7 +117,7 @@ export default function ResumeAnalyzePage() {
             // Get current auth token
             const token = await currentUser.getIdToken();
             
-            const res = await fetch("/api/resumes/upload", {
+            const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/resumes/upload`, {
                 method: "POST",
                 headers: {
                     "Authorization": `Bearer ${token}`

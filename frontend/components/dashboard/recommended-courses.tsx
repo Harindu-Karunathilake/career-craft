@@ -83,7 +83,7 @@ export function RecommendedCourses() {
             });
 
             // 3. Call Recommendation API (Secure Server-Side Processing)
-            const apiResponse = await fetch("/api/recommendations", {
+            const apiResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/recommendations`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ 
