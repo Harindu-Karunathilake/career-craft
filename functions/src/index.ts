@@ -6,6 +6,7 @@ import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import { executeCode } from "./execution";
 import { generateFeedback } from "./gemini";
+import { sendStatusEmail } from "./email-service";
 
 // Initialize Admin SDK
 if (process.env.FUNCTIONS_EMULATOR) {
@@ -19,6 +20,26 @@ if (admin.apps.length === 0) {
 
 const db = admin.firestore();
 console.log("Functions initialized. GEMINI_API_KEY present:", !!process.env.GEMINI_API_KEY);
+
+export const onUserStatusChanged = functions.firestore
+    .document("users/{userId}")
+    .onUpdate(async (change, context) => {
+        const after = change.after.data();
+        const before = change.before.data();
+
+        // Check if status changed
+        if (after.status !== before.status) {
+            // Only strictly for tutors or if the previous status was pending
+            // But usually we just want to notify anyone who gets verified/rejected if they are a tutor
+            if (after.role === 'tutor' && (after.status === 'active' || after.status === 'rejected')) {
+                if (after.email && after.name) {
+                    await sendStatusEmail(after.email, after.name, after.status);
+                } else {
+                    console.warn(`User ${context.params.userId} status changed but missing email/name.`);
+                }
+            }
+        }
+    });
 
 export const startInterview = functions.https.onCall(async (data: any, context: any) => {
     if (!context.auth) {

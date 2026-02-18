@@ -4,6 +4,7 @@ import { useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation"
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth"
 import { doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -24,7 +25,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { firebaseAuth, firebaseDb } from "@/lib/firebase"
+import { firebaseAuth, firebaseDb, firebaseStorage } from "@/lib/firebase"
+import { Loader2 } from "lucide-react"
 
 function formatRegisterError(error: unknown) {
   if (typeof error === "object" && error && "code" in error) {
@@ -55,6 +57,11 @@ function RegisterForm() {
   const [error, setError] = useState<string | null>(null)
   const [isSuccess, setIsSuccess] = useState(false)
 
+  // Tutor specific fields
+  const [institutionName, setInstitutionName] = useState("")
+  const [address, setAddress] = useState("")
+  const [cvFile, setCvFile] = useState<File | null>(null)
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
     if (isSubmitting) return
@@ -64,10 +71,21 @@ function RegisterForm() {
     setIsSubmitting(true)
 
     try {
+      if (role === 'tutor' && !cvFile) {
+        throw new Error("Please upload your CV for verification.")
+      }
+
       const credential = await createUserWithEmailAndPassword(firebaseAuth, email, password)
       const trimmedName = fullName.trim()
       if (credential.user && trimmedName) {
         await updateProfile(credential.user, { displayName: trimmedName })
+      }
+
+      let cvUrl = ""
+      if (role === 'tutor' && cvFile) {
+        const storageRef = ref(firebaseStorage, `cvs/${credential.user.uid}/${Date.now()}_${cvFile.name}`)
+        const snapshot = await uploadBytes(storageRef, cvFile)
+        cvUrl = await getDownloadURL(snapshot.ref)
       }
 
       await setDoc(
@@ -77,10 +95,15 @@ function RegisterForm() {
           name: trimmedName || credential.user.displayName || "",
           email: credential.user.email,
           role,
-          status: "active",
+          status: role === 'tutor' ? "pending" : "active",
           wantsUpdates,
           createdAt: serverTimestamp(),
           updatedAt: serverTimestamp(),
+          ...(role === 'tutor' && {
+            institutionName,
+            address,
+            cvUrl
+          })
         },
         { merge: true }
       )
@@ -90,9 +113,15 @@ function RegisterForm() {
       }
 
       setIsSuccess(true)
-      router.push(role === "tutor" ? "/tutor" : "/user")
+      if (role === 'tutor') {
+         // Maybe redirect to a "Verification Pending" page or just show a message
+         // For now, redirecting to tutor dashboard, but middleware might block if we had it
+         router.push("/tutor") 
+      } else {
+         router.push("/user")
+      }
     } catch (err) {
-      setError(formatRegisterError(err))
+      setError(err instanceof Error ? err.message : formatRegisterError(err))
     } finally {
       setIsSubmitting(false)
     }
@@ -174,6 +203,43 @@ function RegisterForm() {
               </SelectContent>
             </Select>
           </div>
+
+          {role === 'tutor' && (
+            <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+               <div className="space-y-2">
+                <Label htmlFor="institution">Institution Name</Label>
+                <Input
+                  id="institution"
+                  placeholder="University of Examples"
+                  required
+                  value={institutionName}
+                  onChange={(e) => setInstitutionName(e.target.value)}
+                />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  placeholder="123 Education Lane"
+                  required
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                />
+              </div>
+               <div className="space-y-2">
+                <Label htmlFor="cv">Upload CV (PDF)</Label>
+                <Input
+                  id="cv"
+                  type="file"
+                  accept=".pdf,.doc,.docx"
+                  required
+                  onChange={(e) => setCvFile(e.target.files?.[0] || null)}
+                />
+                <p className="text-xs text-muted-foreground">Required for verification.</p>
+              </div>
+            </div>
+          )}
+
           <fieldset className="space-y-2 rounded-md border border-border/60 p-4 text-sm">
             <legend className="px-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">
               Preferences
@@ -190,7 +256,14 @@ function RegisterForm() {
             </label>
           </fieldset>
           <Button type="submit" className="w-full" variant="secondary" disabled={isSubmitting}>
-            {isSubmitting ? "Creating account..." : "Create account"}
+            {isSubmitting ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                {role === 'tutor' ? "Uploading & Creating..." : "Creating account..."}
+              </>
+            ) : (
+              "Create account"
+            )}
           </Button>
         </form>
       </CardContent>
