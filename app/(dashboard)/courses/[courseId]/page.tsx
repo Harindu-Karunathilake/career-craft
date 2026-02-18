@@ -10,6 +10,7 @@ import { useParams, useRouter } from "next/navigation"
 import { Chapter, Lesson } from "@/types"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { ReportDialog } from "@/components/courses/report-dialog"
 
 export default function CourseDetailsPage() {
   const params = useParams()
@@ -64,14 +65,17 @@ export default function CourseDetailsPage() {
 
   return (
     <div className="h-[calc(100vh-2rem)] flex flex-col animate-in fade-in-50 duration-500">
-      <div className="flex items-center gap-4 mb-4">
-        <Button variant="ghost" size="sm" className="pl-0 hover:pl-2 transition-all" onClick={() => router.back()}>
-            <span className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" />
-            Back
-            </span>
-        </Button>
-        <h1 className="text-2xl font-bold tracking-tight truncate">{course.title}</h1>
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-4">
+            <Button variant="ghost" size="sm" className="pl-0 hover:pl-2 transition-all" onClick={() => router.back()}>
+                <span className="flex items-center gap-2 text-muted-foreground hover:text-foreground">
+                <ArrowLeft className="h-4 w-4" />
+                Back
+                </span>
+            </Button>
+            <h1 className="text-2xl font-bold tracking-tight truncate">{course.title}</h1>
+        </div>
+        <ReportDialog courseId={course.id} courseTitle={course.title} />
       </div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 h-full min-h-0">

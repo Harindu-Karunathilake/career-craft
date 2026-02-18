@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Users, Settings } from "lucide-react"
+import { LayoutDashboard, Users, Settings, BookOpen } from "lucide-react"
 
 import {
   Sidebar,
@@ -28,6 +28,11 @@ const adminNav = [
     title: "Users",
     href: "/admin/users",
     icon: Users,
+  },
+  {
+    title: "Courses",
+    href: "/admin/courses",
+    icon: BookOpen,
   },
   {
     title: "Settings",
