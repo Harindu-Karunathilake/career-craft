@@ -1,11 +1,11 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { doc, getDoc } from "firebase/firestore"
+import { doc, getDoc, updateDoc, increment } from "firebase/firestore"
 import { firebaseDb } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Clock, BookOpen, PlayCircle, MonitorPlay } from "lucide-react"
+import { ArrowLeft, Clock, BookOpen, PlayCircle, MonitorPlay, Eye } from "lucide-react"
 import { useParams, useRouter } from "next/navigation"
 import { Chapter, Lesson } from "@/types"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
@@ -33,6 +33,17 @@ export default function CourseDetailsPage() {
           // Default to first lesson of first chapter if available
           if (data.chapters && data.chapters.length > 0 && data.chapters[0].lessons.length > 0) {
               setActiveLesson(data.chapters[0].lessons[0])
+          }
+
+          // ── View tracking (once per session) ──────────────────────────
+          const sessionKey = `viewed:${courseId}`;
+          if (!sessionStorage.getItem(sessionKey)) {
+            sessionStorage.setItem(sessionKey, "1");
+            try {
+              await updateDoc(docRef, { views: increment(1) });
+            } catch {
+              // Non-critical — ignore if view increment fails
+            }
           }
         }
       } catch (error) {
@@ -71,7 +82,13 @@ export default function CourseDetailsPage() {
             Back
             </span>
         </Button>
-        <h1 className="text-2xl font-bold tracking-tight truncate">{course.title}</h1>
+        <h1 className="text-2xl font-bold tracking-tight truncate flex-1">{course.title}</h1>
+        {course.views != null && (
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+            <Eye className="h-3.5 w-3.5" />
+            {course.views.toLocaleString()} views
+          </span>
+        )}
       </div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 h-full min-h-0">
