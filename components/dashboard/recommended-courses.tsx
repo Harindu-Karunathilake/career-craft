@@ -10,6 +10,7 @@ import { Loader2, BookOpen, Sparkles, AlertCircle } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { toast } from "sonner";
+import { useDashboardPath } from "@/hooks/use-dashboard-path";
 
 interface RecommendedCourse {
     id: string;
@@ -23,6 +24,7 @@ interface RecommendedCourse {
 }
 
 export function RecommendedCourses() {
+    const { resume: resumePath } = useDashboardPath();
     const [recommendations, setRecommendations] = useState<RecommendedCourse[]>([]);
     const [loading, setLoading] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
@@ -154,7 +156,7 @@ export function RecommendedCourses() {
                         </p>
                     </div>
                     <Button asChild variant="secondary" size="sm">
-                        <Link href="/user/resume">Upload Resume</Link>
+                        <Link href={resumePath}>Upload Resume</Link>
                     </Button>
                 </div>
             </div>

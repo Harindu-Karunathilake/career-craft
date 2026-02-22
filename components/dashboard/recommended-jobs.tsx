@@ -10,6 +10,7 @@ import { Loader2, Briefcase, Sparkles, AlertCircle, Building2, MapPin, ExternalL
 import Link from "next/link";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { useDashboardPath } from "@/hooks/use-dashboard-path";
 
 interface RecommendedJob {
     id: number | string;
@@ -24,6 +25,7 @@ interface RecommendedJob {
 }
 
 export function RecommendedJobs() {
+    const { resume: resumePath } = useDashboardPath();
     const [recommendations, setRecommendations] = useState<RecommendedJob[]>([]);
     const [loading, setLoading] = useState(false);
     const [analyzing, setAnalyzing] = useState(false);
@@ -97,7 +99,7 @@ export function RecommendedJobs() {
                             </p>
                     </div>
                     <Button asChild variant="secondary" size="sm">
-                        <Link href="/user/resume">Upload Resume</Link>
+                        <Link href={resumePath}>Upload Resume</Link>
                     </Button>
                 </div>
             </div>

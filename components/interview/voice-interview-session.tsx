@@ -12,6 +12,7 @@ import { generateFeedbackAction } from "@/lib/actions/feedback"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore"
 import { cn } from "@/lib/utils"
+import { useDashboardPath } from "@/hooks/use-dashboard-path"
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
@@ -32,6 +33,7 @@ interface VoiceInterviewSessionProps {
 
 export default function VoiceInterviewSession({ sessionId, interviewData }: VoiceInterviewSessionProps) {
     const router = useRouter();
+    const { interviews: interviewsDashboardPath } = useDashboardPath();
     
     const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
     const [messages, setMessages] = useState<SavedMessage[]>([]);
@@ -178,7 +180,7 @@ export default function VoiceInterviewSession({ sessionId, interviewData }: Voic
         if (!userId) return;
 
         if (messages.length === 0) {
-            router.push('/user/interviews');
+            router.push(interviewsDashboardPath);
             return;
         }
 
