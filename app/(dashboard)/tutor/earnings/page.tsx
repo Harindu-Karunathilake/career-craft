@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { collection, query, where, getDocs, orderBy } from "firebase/firestore";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { firebaseDb, firebaseAuth } from "@/lib/firebase";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -233,8 +233,8 @@ export default function TutorEarningsPage() {
                 <div className="flex items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-amber-400 text-sm">
                     <AlertCircle className="h-5 w-5 shrink-0" />
                     <div className="flex-1">
-                        You haven't added your bank account details yet.
-                        Payouts can't be processed without them.
+                        You haven&apos;t added your bank account details yet.
+                        Payouts can&apos;t be processed without them.
                     </div>
                     <Button asChild size="sm" variant="outline" className="border-amber-500/40 text-amber-400 hover:bg-amber-500/10">
                         <Link href="/tutor/settings">Add Bank Details</Link>
@@ -246,7 +246,7 @@ export default function TutorEarningsPage() {
                 <div className="flex items-center gap-3 rounded-lg border border-indigo-500/30 bg-indigo-500/10 p-4 text-indigo-300 text-sm">
                     <Clock className="h-5 w-5 shrink-0" />
                     You have a payout request pending review by the platform admin.
-                    You'll be notified once it's processed.
+                    You&apos;ll be notified once it&apos;s processed.
                 </div>
             )}
 

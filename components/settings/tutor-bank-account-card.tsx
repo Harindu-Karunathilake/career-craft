@@ -80,7 +80,7 @@ export function TutorBankAccountCard() {
             );
             setSaved(true);
             toast.success("Bank details saved.");
-        } catch (e) {
+        } catch {
             toast.error("Failed to save bank details.");
         } finally {
             setSaving(false);

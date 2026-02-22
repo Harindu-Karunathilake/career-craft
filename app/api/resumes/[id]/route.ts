@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminAuth, adminDb, adminStorage } from "@/lib/firebase-admin";
-import { cacheDel, cacheDelPattern } from "@/lib/redis";
+import { cacheDel } from "@/lib/redis";
 
 export async function DELETE(
     req: NextRequest,
