@@ -5,49 +5,53 @@ import { Button } from "@/components/ui/button"
 import { Plus, FileText, Calendar, ArrowRight, Trash2 } from "lucide-react"
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { collection, query, orderBy, getDocs, deleteDoc, doc } from "firebase/firestore"
-import { firebaseDb, firebaseAuth } from "@/lib/firebase"
+import { firebaseAuth } from "@/lib/firebase"
+
 export default function UserResumePage() {
     const [resumes, setResumes] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const fetchResumes = async () => {
-            const userId = firebaseAuth.currentUser?.uid;
-            if (userId) {
-                const q = query(
-                    collection(firebaseDb, "users", userId, "resumes"),
-                    orderBy("createdAt", "desc")
-                );
-                const querySnapshot = await getDocs(q);
-                const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                setResumes(data);
-            }
+    const fetchResumes = async (token: string) => {
+        try {
+            const res = await fetch("/api/resumes/list", {
+                headers: { Authorization: `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error("Failed to fetch");
+            const data = await res.json();
+            setResumes(data);
+        } catch (error) {
+            console.error("Error fetching resumes:", error);
+        } finally {
             setLoading(false);
-        };
-        
-        // Listen for auth state to ensure we have user
-        const unsubscribe = firebaseAuth.onAuthStateChanged((user) => {
+        }
+    };
+
+    useEffect(() => {
+        const unsubscribe = firebaseAuth.onAuthStateChanged(async (user) => {
             if (user) {
-                fetchResumes();
+                const token = await user.getIdToken();
+                await fetchResumes(token);
             } else {
                 setLoading(false);
             }
         });
-
         return () => unsubscribe();
     }, []);
 
     const handleDelete = async (e: React.MouseEvent, resumeId: string) => {
         e.preventDefault();
         e.stopPropagation();
-        if(!confirm("Are you sure you want to delete this analysis?")) return;
-        
-        const userId = firebaseAuth.currentUser?.uid;
-        if(!userId) return;
+        if (!confirm("Are you sure you want to delete this analysis?")) return;
+
+        const user = firebaseAuth.currentUser;
+        if (!user) return;
 
         try {
-            await deleteDoc(doc(firebaseDb, "users", userId, "resumes", resumeId));
+            const token = await user.getIdToken();
+            await fetch(`/api/resumes/${resumeId}`, {
+                method: "DELETE",
+                headers: { Authorization: `Bearer ${token}` },
+            });
             setResumes(resumes.filter(r => r.id !== resumeId));
         } catch (error) {
             console.error("Error deleting resume:", error);
@@ -101,20 +105,20 @@ export default function UserResumePage() {
                                         <span className="text-sm text-muted-foreground font-normal ml-1">/100</span>
                                     </div>
                                 </div>
-                                
+
                                 <h3 className="font-semibold text-lg text-white mb-1 truncate">{resume.jobTitle}</h3>
                                 <p className="text-sm text-muted-foreground mb-4 truncate">{resume.companyName}</p>
-                                
+
                                 <div className="flex items-center justify-between text-xs text-muted-foreground mt-auto">
                                     <div className="flex items-center gap-1">
                                         <Calendar className="h-3 w-3" />
                                         {new Date(resume.createdAt).toLocaleDateString()}
                                     </div>
                                     <div className="flex items-center gap-2">
-                                         <Button variant="ghost" size="icon" className="h-6 w-6 hover:text-red-400" onClick={(e) => handleDelete(e, resume.id)}>
+                                        <Button variant="ghost" size="icon" className="h-6 w-6 hover:text-red-400" onClick={(e) => handleDelete(e, resume.id)}>
                                             <Trash2 className="h-3 w-3" />
-                                         </Button>
-                                         <ArrowRight className="h-4 w-4 bg-transparent group-hover:translate-x-1 transition-transform text-primary" />
+                                        </Button>
+                                        <ArrowRight className="h-4 w-4 bg-transparent group-hover:translate-x-1 transition-transform text-primary" />
                                     </div>
                                 </div>
                             </Card>
