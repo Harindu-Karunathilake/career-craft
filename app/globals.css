@@ -134,3 +134,12 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Chatbase Widget Customization */
+#chatbase-bubble-window {
+  height: 600px !important;
+  width: 380px !important;
+  max-height: 70vh !important;
+  max-width: 90vw !important;
+  bottom: 80px !important;
+}

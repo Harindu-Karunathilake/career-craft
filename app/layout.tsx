@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Script from "next/script";
 import { Geist, Geist_Mono } from "next/font/google";
-import { Toaster } from 'sonner';
+import { Toaster as SonnerToaster } from 'sonner';
+import { Toaster } from "@/components/ui/toaster";
+import { ChatbotWidget } from "@/components/ChatbotWidget";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -32,6 +34,8 @@ export default function RootLayout({
       >
         <Script src="https://js.puter.com/v2/" />
         {children}
+        <SonnerToaster />
+        <ChatbotWidget />
         <Toaster />
       </body>
     </html>
