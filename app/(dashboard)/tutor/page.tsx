@@ -23,6 +23,7 @@ interface Stats {
     totalCourses: number;
     publishedCourses: number;
     totalRevenue: number;
+    totalStudents: number;
 }
 
 export default function TutorDashboardPage() {
@@ -39,8 +40,20 @@ export default function TutorDashboardPage() {
                     collection(firebaseDb, "courses"),
                     where("tutorId", "==", user.uid)
                 );
-                const snap = await getDocs(q);
-                const data: Course[] = snap.docs.map((d) => ({
+
+                // Run course fetch + enrollment/revenue fetch in parallel
+                const [courseSnap, enrollSnap] = await Promise.all([
+                    getDocs(q),
+                    getDocs(
+                        query(
+                            collection(firebaseDb, "enrollments"),
+                            where("tutorId", "==", user.uid),
+                            where("status", "==", "paid")
+                        )
+                    ),
+                ]);
+
+                const data: Course[] = courseSnap.docs.map((d) => ({
                     id: d.id,
                     title: d.data().title ?? "Untitled",
                     views: d.data().views ?? 0,
@@ -50,23 +63,20 @@ export default function TutorDashboardPage() {
                     createdAt: d.data().createdAt,
                 }));
 
-                // Sort by views desc for the table
                 data.sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
                 setCourses(data);
 
-                const totalViews = data.reduce((s, c) => s + (c.views ?? 0), 0);
-                const publishedCourses = data.filter((c) => c.published).length;
-                const totalRevenue = data.reduce(
-                    (s, c) => s + c.price * (c.enrollments ?? 0),
+                // Revenue = sum of tutorShare (95%) from paid enrollments
+                const totalRevenue = enrollSnap.docs.reduce(
+                    (s, d) => s + (d.data().tutorShare ?? 0),
                     0
                 );
+                const totalStudents = enrollSnap.docs.length;
 
-                setStats({
-                    totalViews,
-                    totalCourses: data.length,
-                    publishedCourses,
-                    totalRevenue,
-                });
+                const totalViews = data.reduce((s, c) => s + (c.views ?? 0), 0);
+                const publishedCourses = data.filter((c) => c.published).length;
+
+                setStats({ totalViews, totalCourses: data.length, publishedCourses, totalRevenue, totalStudents });
             } catch (e) {
                 console.error("Tutor dashboard fetch error:", e);
             } finally {
@@ -95,9 +105,7 @@ export default function TutorDashboardPage() {
         },
         {
             label: "Total Students",
-            value: loading
-                ? "—"
-                : courses.reduce((s, c) => s + (c.enrollments ?? 0), 0).toLocaleString(),
+            value: loading ? "—" : (stats?.totalStudents ?? 0).toLocaleString(),
             icon: Users,
             color: "text-sky-400",
             bg: "bg-sky-500/10",
@@ -107,7 +115,7 @@ export default function TutorDashboardPage() {
             label: "Est. Revenue",
             value: loading
                 ? "—"
-                : `$${(stats?.totalRevenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+                : `LKR ${(stats?.totalRevenue ?? 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
             icon: TrendingUp,
             color: "text-amber-400",
             bg: "bg-amber-500/10",

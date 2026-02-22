@@ -147,7 +147,7 @@ export default function TutorCoursesPage() {
                                      </div>
                                      <div className="flex items-center gap-1">
                                          <DollarSign className="h-3 w-3 " />
-                                         <span>{course.price > 0 ? `$${course.price.toFixed(2)}` : 'Free'}</span>
+                                         <span>{course.price > 0 ? `LKR ${course.price.toLocaleString()}` : 'Free'}</span>
                                      </div>
                                  </div>
                              </CardContent>
