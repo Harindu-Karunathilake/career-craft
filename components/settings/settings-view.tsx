@@ -51,7 +51,7 @@ const passwordSchema = z
 
 type PasswordFormValues = z.infer<typeof passwordSchema>
 
-export function SettingsView() {
+export function SettingsView({ embedded = false }: { embedded?: boolean }) {
   const { user, loading: authLoading } = useAuth()
   const [profileSuccess, setProfileSuccess] = useState(false)
   const [profileError, setProfileError] = useState<string | null>(null)
@@ -122,15 +122,100 @@ export function SettingsView() {
     }
   }
 
-  if (authLoading) {
+  if (authLoading) return null
+
+  if (embedded) {
+    // Render just the cards — parent handles the page header and grid
     return (
-      <div className="space-y-8 animate-in fade-in-50 duration-500">
-        <div>
-          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">Preferences</p>
-          <h1 className="mt-1 text-3xl font-bold tracking-tight text-foreground">Settings</h1>
-        </div>
-        <div className="p-8 text-center text-muted-foreground">Loading settings...</div>
-      </div>
+      <>
+        {/* Profile Card */}
+        <Card className="lg:col-span-2 xl:col-span-1">
+          <CardHeader>
+            <CardTitle>Profile</CardTitle>
+            <CardDescription>Update how recruiters and mentors see you.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {profileSuccess && (
+              <Alert className="bg-green-500/10 text-green-600 border-green-500/20">
+                <AlertTitle>Success</AlertTitle>
+                <AlertDescription>Your profile has been updated.</AlertDescription>
+              </Alert>
+            )}
+            {profileError && (
+              <Alert variant="destructive">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{profileError}</AlertDescription>
+              </Alert>
+            )}
+            <Form {...profileForm}>
+              <form onSubmit={profileForm.handleSubmit(onProfileSubmit)} className="space-y-4">
+                <FormField control={profileForm.control} name="name" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Full name</FormLabel>
+                    <FormControl><Input placeholder="Your name" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <div className="space-y-2">
+                  <Label htmlFor="email-emb">Email</Label>
+                  <Input id="email-emb" value={user?.email || ""} disabled readOnly className="opacity-70" />
+                  <p className="text-[0.8rem] text-muted-foreground">Email cannot be changed directly. Contact support.</p>
+                </div>
+                <div className="pt-2">
+                  <Button type="submit" disabled={profileForm.formState.isSubmitting}>
+                    {profileForm.formState.isSubmitting ? "Saving..." : "Save changes"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+
+        {/* Password Card */}
+        <Card className="lg:col-span-2 xl:col-span-1">
+          <CardHeader>
+            <CardTitle>Security</CardTitle>
+            <CardDescription>Manage your password and account security.</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {passwordSuccess && (
+              <Alert className="bg-green-500/10 text-green-600 border-green-500/20">
+                <AlertTitle>Success</AlertTitle>
+                <AlertDescription>Your password has been changed.</AlertDescription>
+              </Alert>
+            )}
+            {passwordError && (
+              <Alert variant="destructive">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{passwordError}</AlertDescription>
+              </Alert>
+            )}
+            <Form {...passwordForm}>
+              <form onSubmit={passwordForm.handleSubmit(onPasswordSubmit)} className="space-y-4">
+                <FormField control={passwordForm.control} name="password" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>New Password</FormLabel>
+                    <FormControl><Input type="password" placeholder="Min. 6 characters" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={passwordForm.control} name="confirmPassword" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password</FormLabel>
+                    <FormControl><Input type="password" placeholder="Re-enter password" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <div className="pt-2">
+                  <Button type="submit" disabled={passwordForm.formState.isSubmitting}>
+                    {passwordForm.formState.isSubmitting ? "Updating..." : "Update Password"}
+                  </Button>
+                </div>
+              </form>
+            </Form>
+          </CardContent>
+        </Card>
+      </>
     )
   }
 
