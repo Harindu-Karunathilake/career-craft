@@ -6,7 +6,7 @@ import { Card } from "@/components/ui/card"
 import { Bot, PhoneOff, Mic, MicOff } from "lucide-react"
 import { useEffect, useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { vapi } from "@/lib/vapi.sdk"
+import Vapi from "@vapi-ai/web"
 import { interviewer } from "@/constants/interview"
 import { generateFeedbackAction } from "@/lib/actions/feedback"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
@@ -46,7 +46,6 @@ const getVapi = () => {
     if (!vapiSingleton) {
         const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
         if (!token) return null;
-        const Vapi = require('@vapi-ai/web').default;
         vapiSingleton = new Vapi(token);
 
         // Bind listeners globally ONCE
