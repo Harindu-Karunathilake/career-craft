@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import Script from "next/script";
 import { useAuth } from "@/hooks/use-auth";
-import { Bot, MessageSquare } from "lucide-react";
+import { Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 declare global {

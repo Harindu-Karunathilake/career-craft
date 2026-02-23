@@ -1,12 +1,12 @@
-"use client";
+ "use client";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Bot, PhoneOff, Mic, MicOff } from "lucide-react"
-import { useEffect, useState, Suspense } from "react"
+import { useEffect, useState, Suspense, useRef } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { vapi } from "@/lib/vapi.sdk"
+import Vapi from "@vapi-ai/web"
 import { interviewer } from "@/constants/interview"
 import { generateFeedbackAction } from "@/lib/actions/feedback"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
@@ -25,6 +25,57 @@ interface SavedMessage {
   content: string;
 }
 
+let vapiSingleton: any = null;
+let globalHasStarted = false;
+
+// We will store the current React state setters here so the singleton can call them
+// even if the component remounts in Strict Mode.
+let setCallStatusGlobal: ((status: CallStatus) => void) | null = null;
+let setMessagesGlobal: ((updater: any) => void) | null = null;
+let setIsSpeakingGlobal: ((isSpeaking: boolean) => void) | null = null;
+let setLastMessageGlobal: ((msg: string) => void) | null = null;
+
+const getVapi = () => {
+    if (!vapiSingleton) {
+        const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
+        if (!token) return null;
+        vapiSingleton = new Vapi(token);
+
+        // Bind listeners globally ONCE
+        vapiSingleton.on("call-start", () => {
+            console.log("GLOBAL VAPI: call-start received!");
+            if (setCallStatusGlobal) setCallStatusGlobal(CallStatus.ACTIVE);
+        });
+        vapiSingleton.on("call-end", () => {
+            console.log("GLOBAL VAPI: call-end received!");
+            if (setCallStatusGlobal) setCallStatusGlobal(CallStatus.FINISHED);
+            globalHasStarted = false; // Reset for next time
+        });
+        vapiSingleton.on("message", (message: any) => {
+            console.log("GLOBAL VAPI: message received:", message.type, message.role);
+            if (message.type === "transcript" && message.transcriptType === "final") {
+                const newMessage = { role: message.role, content: message.transcript };
+                if (setMessagesGlobal) setMessagesGlobal((prev: any) => [...prev, newMessage]);
+                if (setLastMessageGlobal) setLastMessageGlobal(message.transcript);
+            }
+        });
+        vapiSingleton.on("speech-start", () => {
+            console.log("GLOBAL VAPI: speech-start received!");
+            if (setIsSpeakingGlobal) setIsSpeakingGlobal(true);
+        });
+        vapiSingleton.on("speech-end", () => {
+            console.log("GLOBAL VAPI: speech-end received!");
+            if (setIsSpeakingGlobal) setIsSpeakingGlobal(false);
+        });
+        vapiSingleton.on("error", (error: any) => {
+            console.error("GLOBAL VAPI: error received RAW:", error);
+            if (setCallStatusGlobal) setCallStatusGlobal(CallStatus.INACTIVE);
+            globalHasStarted = false; // Reset on error
+        });
+    }
+    return vapiSingleton;
+};
+
 function InterviewContent() {
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -38,72 +89,73 @@ function InterviewContent() {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [lastMessage, setLastMessage] = useState<string>("");
     const [isMuted, setIsMuted] = useState(false);
+    const vapiRef = useRef<any>(null);
 
-    const startCall = async () => {
-        const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
-        if (!token) {
-            console.error("Missing NEXT_PUBLIC_VAPI_WEB_TOKEN");
-            alert("Configuration Error: Missing Vapi Web Token. Please check your .env file.");
-            return;
-        }
-
-        setCallStatus(CallStatus.CONNECTING);
-        try {
-            console.log("Starting Vapi call with token:", token.slice(0, 5) + "...");
-            await vapi.start(interviewer);
-        } catch (err: any) {
-            console.error("Failed to start call", err);
-            console.error("Error details:", JSON.stringify(err, null, 2));
-            alert(`Failed to start interview: ${err.message || JSON.stringify(err)}`);
-            setCallStatus(CallStatus.INACTIVE);
-        }
-    };
-
-    const endCall = async () => {
-        vapi.stop();
-        setCallStatus(CallStatus.FINISHED);
-        await handleGenerateFeedback();
-    };
-
+    // Update the global setters every time this component renders
+    // so the global Vapi instance always calls the *latest* React state setters.
     useEffect(() => {
-        // Auto-start call on mount
-        setTimeout(() => {
-            startCall();
-        }, 0);
-        
-        const onCallStart = () => setCallStatus(CallStatus.ACTIVE);
-        const onCallEnd = () => setCallStatus(CallStatus.FINISHED);
-        
-        const onMessage = (message: any) => {
-            if (message.type === "transcript" && message.transcriptType === "final") {
-                const newMessage = { role: message.role, content: message.transcript };
-                setMessages((prev) => [...prev, newMessage]);
-                setLastMessage(message.transcript);
-            }
-        };
-
-        const onSpeechStart = () => setIsSpeaking(true);
-        const onSpeechEnd = () => setIsSpeaking(false);
-        const onError = (error: Error) => console.error("Vapi Error:", error);
-
-        vapi.on("call-start", onCallStart);
-        vapi.on("call-end", onCallEnd);
-        vapi.on("message", onMessage);
-        vapi.on("speech-start", onSpeechStart);
-        vapi.on("speech-end", onSpeechEnd);
-        vapi.on("error", onError);
+        setCallStatusGlobal = setCallStatus;
+        setMessagesGlobal = setMessages;
+        setIsSpeakingGlobal = setIsSpeaking;
+        setLastMessageGlobal = setLastMessage;
 
         return () => {
-            vapi.stop();
-            vapi.removeAllListeners();
+            setCallStatusGlobal = null;
+            setMessagesGlobal = null;
+            setIsSpeakingGlobal = null;
+            setLastMessageGlobal = null;
         };
     }, []);
 
+    const endCall = async () => {
+        if (vapiRef.current) {
+            vapiRef.current.stop();
+        }
+        setCallStatus(CallStatus.FINISHED);
+        await handleGenerateFeedback();
+    };    
 
+    useEffect(() => {
+        const vapiInstance = getVapi();
+        if (!vapiInstance) {
+            console.error("Vapi: Failed to initialize Vapi instance");
+            return;
+        }
+
+        vapiRef.current = vapiInstance;
+        
+        const startDynamicCall = async () => {
+             // Use the global flag to prevent Strict Mode double-firing
+             if (globalHasStarted) {
+                 console.log("Vapi: globalHasStarted is true, skipping start.");
+                 return;
+             }
+             globalHasStarted = true;
+             
+             setCallStatus(CallStatus.CONNECTING);
+             try {
+                 console.log("Vapi: About to call vapiInstance.start()...");
+                 const startResult = await vapiInstance.start(interviewer);
+                 console.log("Vapi: vapiInstance.start() Promise resolved with:", startResult);
+             } catch (err: any) {
+                 console.error("Vapi: Failed to start instance call (Caught exception):", err);
+                 setCallStatus(CallStatus.INACTIVE);
+                 globalHasStarted = false;
+             }
+        };
+
+        startDynamicCall();
+
+        return () => {
+            console.log("Vapi: useEffect unmounting, keeping global listeners intact.");
+        };
+    }, []);
 
     const toggleMute = () => {
         const newMutedState = !isMuted;
-        vapi.setMuted(newMutedState);
+        if (vapiRef.current) {
+            vapiRef.current.setMuted(newMutedState);
+        }
         setIsMuted(newMutedState);
     }
 
@@ -138,6 +190,7 @@ function InterviewContent() {
                     createdAt: new Date().toISOString(),
                     transcript: messages
                 });
+                
                 
                 router.push(`/interview/${interviewId}/feedback`);
             } else {

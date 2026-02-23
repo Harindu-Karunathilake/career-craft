@@ -9,7 +9,7 @@ import {
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore"
-import { BookOpen, Flag, Loader2, Trash2, CheckCircle, ExternalLink } from "lucide-react"
+import { Flag, Loader2, Trash2, CheckCircle, ExternalLink } from "lucide-react"
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"

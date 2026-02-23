@@ -108,7 +108,7 @@ export function PublishedCoursesList() {
                         )}
                         <div className="absolute top-2 right-2">
                              <Badge className="bg-black/50 backdrop-blur border-white/10 text-white hover:bg-black/60 text-xs px-2 py-0.5">
-                                 {course.price > 0 ? `$${course.price}` : 'Free'}
+                                 {course.price > 0 ? `LKR ${course.price.toLocaleString()}` : 'Free'}
                              </Badge>
                         </div>
                     </div>
