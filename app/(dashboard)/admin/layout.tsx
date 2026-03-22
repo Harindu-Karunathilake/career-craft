@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar"
 import { AdminSidebar } from "@/components/dashboard/admin-sidebar"
 import { DashboardHeaderActions } from "@/components/dashboard/dashboard-header-actions"
+import { GlobalBackground } from "@/components/ui/global-background"
 
 export default function AdminDashboardLayout({
   children,
@@ -10,7 +11,8 @@ export default function AdminDashboardLayout({
   children: ReactNode
 }) {
   return (
-    <SidebarProvider className="admin-dashboard-theme">
+    <SidebarProvider className="admin-dashboard-theme bg-black relative overflow-x-hidden">
+      <GlobalBackground />
       <style dangerouslySetInnerHTML={{ __html: `
         .admin-dashboard-theme {
           --primary: oklch(0.623 0.17 40);
@@ -26,13 +28,13 @@ export default function AdminDashboardLayout({
         }
       `}} />
       <AdminSidebar />
-      <SidebarInset className="bg-black text-white">
-        <header className="flex flex-wrap items-center justify-between gap-4 border-b border-white/10 px-6 py-4">
+      <SidebarInset className="bg-transparent text-white relative z-10 w-full">
+        <header className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-black/40 backdrop-blur-xl px-6 py-4">
           <div className="flex items-center gap-4">
             <SidebarTrigger className="text-white" />
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-primary/80">Admin dashboard</p>
-              <p className="text-lg font-semibold">System overview</p>
+              <p className="text-lg font-semibold text-white">System overview</p>
             </div>
           </div>
           <div className="flex flex-col items-end gap-3 text-xs text-white/60">
