@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import { doc, getDoc, updateDoc, increment } from "firebase/firestore"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
+import { ReportDialog } from "@/components/courses/report-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowLeft, Clock, BookOpen, PlayCircle, MonitorPlay, Eye, ShoppingCart, Lock, CheckCircle2, Loader2 } from "lucide-react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
@@ -219,6 +220,7 @@ export default function CourseDetailsPage() {
             {course.views.toLocaleString()} views
           </span>
         )}
+        <ReportDialog courseId={course.id} courseTitle={course.title} />
       </div>
 
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 h-full min-h-0">
