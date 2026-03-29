@@ -15,6 +15,8 @@ export default function InterviewFeedbackPage() {
     const router = useRouter();
     const searchParams = useSearchParams();
     const [feedback, setFeedback] = useState<any>(null);
+    const [transcript, setTranscript] = useState<any[]>([]);
+    const [isOwner, setIsOwner] = useState(false);
     const [loading, setLoading] = useState(true);
     const [dashboardLink, setDashboardLink] = useState('/user/interviews');
 
@@ -42,16 +44,22 @@ export default function InterviewFeedbackPage() {
              // or fallback to current user (if viewing own)
             const paramUserId = searchParams.get('uid');
             const currentUser = firebaseAuth.currentUser;
-            const userId = paramUserId || currentUser?.uid;
+            const currentUid = currentUser?.uid;
+            const userId = paramUserId || currentUid;
 
             if (!userId || !id) return;
+
+            // If param is provided but no user is logged in, treat as public viewer
+            setIsOwner(currentUid ? currentUid === userId : false)
 
             try {
                 const docRef = doc(firebaseDb, "users", userId, "interviews", id as string);
                 const docSnap = await getDoc(docRef);
                 
                 if (docSnap.exists()) {
-                    setFeedback(docSnap.data().feedback);
+                    const data = docSnap.data();
+                    setFeedback(data.feedback);
+                    setTranscript(data.transcript || []);
                 } else {
                     console.error("No feedback found");
                 }
@@ -119,10 +127,16 @@ export default function InterviewFeedbackPage() {
             >
                 
                 <motion.div variants={itemVariants} className="space-y-4 text-center">
-                    <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">Interview Analysis</h1>
-                    <p className="text-lg text-white/60">Detailed AI feedback on your performance.</p>
+                    <h1 className="text-4xl font-bold tracking-tight sm:text-5xl">
+                        {isOwner ? "Interview Analysis" : "Interview Transcript"}
+                    </h1>
+                    <p className="text-lg text-white/60">
+                        {isOwner ? "Detailed AI feedback on your performance." : "Read the public transcript for this interview loop."}
+                    </p>
                 </motion.div>
 
+                {isOwner ? (
+                <>
                 {/* Score Overview */}
                 <div className="grid gap-6 md:grid-cols-2">
                     <motion.div variants={itemVariants}>
@@ -208,6 +222,31 @@ export default function InterviewFeedbackPage() {
                         </p>
                     </Card>
                 </motion.div>
+                </>
+                ) : (
+                <motion.div variants={itemVariants} className="space-y-6">
+                    {transcript && transcript.length > 0 ? (
+                        <Card className="bg-white/5 border-white/10 p-6 md:p-8 backdrop-blur-md">
+                            <div className="space-y-6 overflow-hidden">
+                                {transcript.filter(msg => msg.role !== 'system').map((msg: any, idx: number) => (
+                                    <div key={idx} className={`flex gap-4 ${msg.role === 'assistant' ? '' : 'flex-row-reverse'}`}>
+                                        <div className="shrink-0 h-10 w-10 flex items-center justify-center font-bold text-xl">
+                                            {msg.role === 'assistant' ? '🤖' : '👤'}
+                                        </div>
+                                        <div className={`p-4 rounded-2xl ${msg.role === 'assistant' ? 'bg-indigo-500/10 text-indigo-100 border border-indigo-500/20 rounded-tl-sm' : 'bg-white/10 text-white border border-white/10 rounded-tr-sm'} max-w-[85%]`}>
+                                            <p className="whitespace-pre-wrap text-sm leading-relaxed">{msg.content}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </Card>
+                    ) : (
+                        <div className="text-center py-20 text-zinc-500 border border-dashed border-white/10 rounded-2xl bg-white/5">
+                            No transcript available for this interview.
+                        </div>
+                    )}
+                </motion.div>
+                )}
 
                 <motion.div variants={itemVariants} className="flex justify-center gap-4 pt-4">
                     <Button variant="outline" className="border-white/10 bg-transparent hover:bg-white/10 text-white" onClick={() => router.push(dashboardLink)}>

@@ -11,12 +11,12 @@ import {
   NavigationMenuList,
 } from "@/components/ui/navigation-menu"
 
-import { Menu } from "lucide-react"
+import { Menu, Loader2 } from "lucide-react"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet"
 import { useAuth } from "@/hooks/use-auth"
 
 export function SiteNavbar() {
-  const { profile } = useAuth()
+  const { user, profile, loading } = useAuth()
 
   const getDashboardUrl = () => {
     if (profile?.role === "tutor") return "/tutor"
@@ -56,9 +56,19 @@ export function SiteNavbar() {
       </NavigationMenu>
 
       <div className="flex items-center gap-4">
-        <Button asChild size="sm" className="hidden md:flex min-w-24 bg-white text-black hover:bg-zinc-200">
-            <Link href={dashboardUrl}>Dashboard</Link>
-        </Button>
+        {loading ? (
+          <Button disabled size="sm" className="hidden md:flex min-w-24 bg-white/50 text-black">
+             <Loader2 className="h-4 w-4 animate-spin" />
+          </Button>
+        ) : user ? (
+          <Button asChild size="sm" className="hidden md:flex min-w-24 bg-white text-black hover:bg-zinc-200">
+              <Link href={dashboardUrl}>Dashboard</Link>
+          </Button>
+        ) : (
+          <Button asChild size="sm" className="hidden md:flex min-w-24 bg-white text-black hover:bg-zinc-200">
+              <Link href="/login">Login</Link>
+          </Button>
+        )}
 
         {/* Mobile Menu */}
         <Sheet>
@@ -84,9 +94,19 @@ export function SiteNavbar() {
                         Blog
                     </Link>
                     <div className="h-px bg-white/10 my-2" />
-                    <Link href={dashboardUrl} className="flex items-center py-2 text-lg font-medium text-white">
-                        Dashboard
-                    </Link>
+                    {loading ? (
+                        <div className="flex items-center py-2 text-lg font-medium text-white/50">
+                            Loading...
+                        </div>
+                    ) : user ? (
+                        <Link href={dashboardUrl} className="flex items-center py-2 text-lg font-medium text-white">
+                            Dashboard
+                        </Link>
+                    ) : (
+                        <Link href="/login" className="flex items-center py-2 text-lg font-medium text-white">
+                            Login
+                        </Link>
+                    )}
                 </nav>
             </SheetContent>
         </Sheet>
