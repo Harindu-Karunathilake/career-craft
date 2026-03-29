@@ -62,8 +62,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Already enrolled" }, { status: 409 });
         }
 
-        // ── Free course: enroll immediately ──────────────────────────────────
-        if (!course.price || course.price === 0) {
+        // ── Free course or Tutor: enroll immediately ──────────────────────────────────
+        if (!course.price || course.price === 0 || course.tutorId === userId) {
             const enrollRef = db.collection("enrollments").doc();
             await enrollRef.set({
                 id: enrollRef.id,
@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
                 platformFee: 0,
                 tutorShare: 0,
                 status: "free",
+                completedLessons: [],
                 createdAt: new Date().toISOString(),
             });
             // Increment enrollments counter
