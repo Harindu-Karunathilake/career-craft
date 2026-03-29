@@ -57,7 +57,7 @@ export async function markLessonComplete(
             
             // Grant XP and Tier Updates
             const userDoc = await transaction.get(userRef);
-            let currentXp = userDoc.exists ? (userDoc.data()?.careerXp || 0) : 0;
+            const currentXp = userDoc.exists ? (userDoc.data()?.careerXp || 0) : 0;
             const newXp = currentXp + earnedXp;
             const newTier = calculateTier(newXp);
             

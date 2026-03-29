@@ -13,7 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Script from "next/script"
 import { toast } from "sonner"
-import { markLessonComplete } from "@/lib/actions/gamification"
+import { markLessonComplete as _markLessonComplete } from "@/lib/actions/gamification"
 import Link from "next/link"
 
 declare global {
@@ -81,7 +81,7 @@ export default function CourseDetailsPage() {
       if (user) {
         if (data.tutorId === user.uid) { setIsOwnCourse(true) }
 
-        const { collection, query, where, limit, getDocs, doc, setDoc } = await import("firebase/firestore")
+        const { collection, query, where, limit, getDocs } = await import("firebase/firestore")
         const eq = query(
           collection(firebaseDb, "enrollments"),
           where("userId", "==", user.uid),

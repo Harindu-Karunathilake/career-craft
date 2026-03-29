@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from "react"
 import { firebaseAuth, firebaseDb } from "@/lib/firebase"
-import { collection, getDocs, doc, getDoc } from "firebase/firestore"
 import { User, Award, Star, Zap, Shield, Trophy, ExternalLink } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
 import Image from "next/image"
 import { motion, Variants } from "framer-motion"
@@ -26,7 +24,7 @@ const itemVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.4, ease: "easeOut" } }
 }
 
-interface Badge {
+interface CourseBadge {
   courseId: string
   courseTitle: string
   earnedAt: string
@@ -35,7 +33,7 @@ interface Badge {
 export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [userData, setUserData] = useState<any>(null)
-  const [badges, setBadges] = useState<Badge[]>([])
+  const [badges, setBadges] = useState<CourseBadge[]>([])
   const [photoURL, setPhotoURL] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [email, setEmail] = useState<string | null>(null)
@@ -59,7 +57,7 @@ export default function ProfilePage() {
         // Fetch already-earned badges
         const badgesSnap = await getDocs(collection(firebaseDb, "users", user.uid, "badges"))
         const existingBadgeIds = new Set(badgesSnap.docs.map(d => d.id))
-        const fetched: Badge[] = badgesSnap.docs.map(d => d.data() as Badge)
+        const fetched: CourseBadge[] = badgesSnap.docs.map(d => d.data() as CourseBadge)
 
         // ── Backfill: scan completed enrollments ────────────────────────────
         const enrollSnap = await getDocs(
@@ -101,7 +99,7 @@ export default function ProfilePage() {
               courseTitle: course.title || "Course",
               earnedAt: enr.completedAt || new Date().toISOString(),
             })
-            fetched.push({ courseId: enr.courseId, courseTitle: course.title, earnedAt: enr.completedAt || new Date().toISOString() })
+            fetched.push({ courseId: enr.courseId, courseTitle: course.title, earnedAt: enr.completedAt || new Date().toISOString() } as CourseBadge)
             existingBadgeIds.add(enr.courseId)
             didWrite = true
           }
