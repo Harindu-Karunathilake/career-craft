@@ -6,13 +6,15 @@ import { firebaseDb, firebaseAuth } from "@/lib/firebase"
 import { Button } from "@/components/ui/button"
 import { ReportDialog } from "@/components/courses/report-dialog"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Clock, BookOpen, PlayCircle, MonitorPlay, Eye, ShoppingCart, Lock, CheckCircle2, Loader2 } from "lucide-react"
+import { ArrowLeft, Clock, BookOpen, PlayCircle, MonitorPlay, Eye, ShoppingCart, Lock, CheckCircle2, Loader2, Award } from "lucide-react"
 import { useParams, useRouter, useSearchParams } from "next/navigation"
 import { Chapter, Lesson } from "@/types"
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Script from "next/script"
 import { toast } from "sonner"
+import { markLessonComplete } from "@/lib/actions/gamification"
+import Link from "next/link"
 
 declare global {
     interface Window {
@@ -38,6 +40,13 @@ export default function CourseDetailsPage() {
   const [isOwnCourse, setIsOwnCourse] = useState(false)
   const [purchasing, setPurchasing] = useState(false)
   const [payhereReady, setPayhereReady] = useState(false)
+  
+  // Progression States
+  const [completedLessons, setCompletedLessons] = useState<string[]>([])
+  const [enrollmentId, setEnrollmentId] = useState<string | null>(null)
+  const [markingComplete, setMarkingComplete] = useState(false)
+  const [canMarkComplete, setCanMarkComplete] = useState(false)
+  const [timeLeft, setTimeLeft] = useState(5)
 
   // ── Show toast from PayHere redirect ──────────────────────────────────────
   useEffect(() => {
@@ -70,19 +79,25 @@ export default function CourseDetailsPage() {
       // ── Check enrollment + ownership ─────────────────────────────────────
       const user = firebaseAuth.currentUser
       if (user) {
-        if (data.tutorId === user.uid) { setIsOwnCourse(true); return }
-        if (!data.price || data.price === 0) { setIsEnrolled(true); return }
+        if (data.tutorId === user.uid) { setIsOwnCourse(true) }
 
-        const { collection, query, where, limit, getDocs } = await import("firebase/firestore")
+        const { collection, query, where, limit, getDocs, doc, setDoc } = await import("firebase/firestore")
         const eq = query(
           collection(firebaseDb, "enrollments"),
           where("userId", "==", user.uid),
           where("courseId", "==", courseId),
-          where("status", "in", ["paid", "free"]),
+          where("status", "in", ["paid", "free", "completed"]),
           limit(1)
         )
         const snap = await getDocs(eq)
-        if (!snap.empty) setIsEnrolled(true)
+        if (!snap.empty) {
+            setIsEnrolled(true)
+            const enrData = snap.docs[0].data()
+            setEnrollmentId(snap.docs[0].id)
+            if (enrData.completedLessons) {
+                setCompletedLessons(enrData.completedLessons)
+            }
+        }
       }
     } catch (error) {
       console.error("Error fetching course:", error)
@@ -95,6 +110,33 @@ export default function CourseDetailsPage() {
     const unsubscribe = firebaseAuth.onAuthStateChanged(() => { fetchData() })
     return () => unsubscribe()
   }, [fetchData])
+  
+  // ── Time gating for lesson completion ─────────────────────────────────────
+  useEffect(() => {
+    if (!activeLesson) return
+    
+    // If already complete, allow passing freely
+    if (completedLessons.includes(activeLesson.id)) {
+        setCanMarkComplete(true)
+        return
+    }
+
+    setCanMarkComplete(false)
+    setTimeLeft(5)
+    
+    const timer = setInterval(() => {
+        setTimeLeft(prev => {
+            if (prev <= 1) {
+                clearInterval(timer)
+                setCanMarkComplete(true)
+                return 0
+            }
+            return prev - 1
+        })
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, [activeLesson, completedLessons])
 
   // ── PayHere purchase ───────────────────────────────────────────────────────
   const handlePurchase = async () => {
@@ -121,7 +163,9 @@ export default function CourseDetailsPage() {
 
       // Free enroll handled server-side
       if (data.enrolled && data.free) {
-        toast.success("You are now enrolled for free!"); setIsEnrolled(true); return
+        toast.success("You are now enrolled for free!")
+        await fetchData()
+        return
       }
 
       // PayHere popup
@@ -182,6 +226,68 @@ export default function CourseDetailsPage() {
     }
   }
 
+  // ── Gamification Progression ────────────────────────────────────────────────
+  const handleMarkComplete = async () => {
+    if (!activeLesson || !enrollmentId) {
+      toast.error("No enrollment ID - please re-enroll first")
+      return
+    }
+    
+    const lessonId = activeLesson.id
+    if (completedLessons.includes(lessonId)) return
+    
+    // Optimistic UI updates
+    setCompletedLessons(prev => [...prev, lessonId])
+    setMarkingComplete(true)
+    
+    const totalLessons = chapters.reduce((sum: number, ch: any) => sum + (ch.lessons?.length || 0), 0)
+    const newCompletedLessons = [...completedLessons, lessonId]
+    const isCourseCompleted = newCompletedLessons.length >= totalLessons
+
+    try {
+      const { doc, updateDoc, arrayUnion } = await import("firebase/firestore")
+      const enrRef = doc(firebaseDb, "enrollments", enrollmentId)
+      
+      const updates: any = { completedLessons: arrayUnion(lessonId) }
+      if (isCourseCompleted) {
+        updates.status = "completed"
+        updates.completedAt = new Date().toISOString()
+      }
+      
+      await updateDoc(enrRef, updates)
+      
+      toast.success("✅ Lesson marked complete! +10 XP")
+      if (isCourseCompleted) {
+        toast.success("🏆 Course Completed! Badge Unlocked!", { duration: 5000 })
+      }
+
+      // Also call server action for XP + badge in background (non-blocking)
+      const userId = firebaseAuth.currentUser?.uid
+      if (userId) {
+        markLessonComplete(enrollmentId, lessonId, userId, courseId, totalLessons)
+          .then(res => {
+            if (!res?.success) console.error("[Badge/XP] Server action failed:", res?.error)
+          })
+      }
+    } catch (err: any) {
+      console.error("[handleMarkComplete] Firestore write failed:", err)
+      toast.error(`Could not save progress: ${err.message}`)
+      // Roll back optimistic update
+      setCompletedLessons(prev => prev.filter(id => id !== lessonId))
+    }
+    
+    setMarkingComplete(false)
+    
+    // Auto advance to next lesson
+    let foundCurrent = false
+    for (const chapter of chapters) {
+        for (const lesson of chapter.lessons) {
+            if (foundCurrent) { setActiveLesson(lesson); return }
+            if (lesson.id === activeLesson.id) foundCurrent = true
+        }
+    }
+  }
+
   if (loading) return <div className="p-8 text-muted-foreground">Loading...</div>
 
   if (!course) return (
@@ -193,7 +299,7 @@ export default function CourseDetailsPage() {
 
   const chapters: Chapter[] = course.chapters || []
   const isFree = !course.price || course.price === 0
-  const hasAccess = isEnrolled || isOwnCourse || isFree
+  const hasAccess = isEnrolled
 
   // ── Render ─────────────────────────────────────────────────────────────────
   return (
@@ -261,6 +367,28 @@ export default function CourseDetailsPage() {
                   </CardHeader>
                   <CardContent className="prose dark:prose-invert max-w-none text-sm">
                     <p className="whitespace-pre-wrap">{activeLesson.content || activeLesson.description || "No content added yet."}</p>
+                    
+                    {/* Mark as Complete Button */}
+                    {isEnrolled && enrollmentId && !completedLessons.includes(activeLesson.id) && (
+                        <div className="mt-8 pt-6 border-t flex justify-end">
+                            <Button
+                                onClick={handleMarkComplete}
+                                disabled={markingComplete || !canMarkComplete}
+                                className="bg-emerald-600 hover:bg-emerald-500 text-white transition-all shadow-sm hover:shadow"
+                            >
+                                {markingComplete ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
+                                {canMarkComplete ? "Mark as Complete & Continue" : `Reading... (${timeLeft}s remaining)`}
+                            </Button>
+                        </div>
+                    )}
+                    {isEnrolled && enrollmentId && completedLessons.includes(activeLesson.id) && (
+                        <div className="mt-8 pt-6 border-t flex justify-end">
+                            <Button disabled variant="outline" className="text-emerald-600 border-emerald-600/30 bg-emerald-50 dark:bg-emerald-950/20">
+                                <CheckCircle2 className="h-4 w-4 mr-2" />
+                                Completed
+                            </Button>
+                        </div>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -294,14 +422,14 @@ export default function CourseDetailsPage() {
                 )}
                 <Button
                   size="lg"
-                  className="mt-2 bg-indigo-600 hover:bg-indigo-500 text-white min-w-[200px]"
+                  className="mt-2 w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white min-w-[200px]"
                   onClick={handlePurchase}
-                  disabled={purchasing || (!payhereReady && course.price > 0)}
+                  disabled={purchasing || (!payhereReady && course.price > 0 && !isOwnCourse)}
                 >
                   {purchasing ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing…</>
                   ) : (
-                    <><ShoppingCart className="mr-2 h-4 w-4" /> {isFree ? "Enroll Free" : `Buy — LKR ${course.price}`}</>
+                    <><ShoppingCart className="mr-2 h-4 w-4" /> {isOwnCourse ? "Test Gamification (Enrolls Free)" : isFree ? "Enroll Free" : `Buy — LKR ${course.price}`}</>
                   )}
                 </Button>
               </div>
@@ -325,6 +453,26 @@ export default function CourseDetailsPage() {
               </span>
             )}
           </div>
+          {/* Progress Bar Display */}
+          {isEnrolled && chapters.length > 0 && (
+             <div className="px-4 py-3 bg-muted/10 border-b">
+                <div className="flex justify-between items-center text-xs font-medium text-muted-foreground mb-1.5">
+                    <span>Course Progress</span>
+                    <span>{completedLessons.length} / {chapters.reduce((sum: number, ch: any) => sum + (ch.lessons?.length || 0), 0)}</span>
+                </div>
+                <div className="w-full bg-border h-1.5 rounded-full overflow-hidden">
+                    <div className="bg-emerald-500 h-full transition-all duration-500" style={{ width: `${Math.min(100, (completedLessons.length / chapters.reduce((sum: number, ch: any) => sum + (ch.lessons?.length || 0), 0)) * 100)}%` }} />
+                </div>
+                {completedLessons.length > 0 && completedLessons.length === chapters.reduce((sum: number, ch: any) => sum + (ch.lessons?.length || 0), 0) && firebaseAuth.currentUser?.uid && (
+                    <Button asChild size="sm" variant="outline" className="w-full text-emerald-600 border-emerald-200 mt-3 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-800">
+                        <Link href={`/badges/${firebaseAuth.currentUser.uid}/${courseId}`} target="_blank">
+                            <Award className="w-4 h-4 mr-2" />
+                            View Course Badge
+                        </Link>
+                    </Button>
+                )}
+             </div>
+          )}
           <ScrollArea className="flex-1">
             <div className="p-4">
               {chapters.length > 0 ? (
@@ -352,9 +500,12 @@ export default function CourseDetailsPage() {
                               }`}
                             >
                               {!hasAccess ? <Lock className="h-4 w-4 shrink-0" /> :
-                               lesson.videoUrl ? <PlayCircle className="h-4 w-4" /> : <BookOpen className="h-4 w-4" />}
+                               lesson.videoUrl ? <PlayCircle className="h-4 w-4 shrink-0" /> : <BookOpen className="h-4 w-4 shrink-0" />}
                               <span className="truncate flex-1 text-left">{lesson.title}</span>
-                              {lesson.duration && <span className="text-[10px] opacity-70">{lesson.duration}m</span>}
+                              {completedLessons.includes(lesson.id) && (
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mx-1" />
+                              )}
+                              {lesson.duration && <span className="text-[10px] opacity-70 shrink-0">{lesson.duration}m</span>}
                             </button>
                           ))}
                         </div>
