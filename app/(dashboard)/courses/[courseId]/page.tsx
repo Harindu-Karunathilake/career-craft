@@ -243,32 +243,46 @@ export default function CourseDetailsPage() {
     const totalLessons = chapters.reduce((sum: number, ch: any) => sum + (ch.lessons?.length || 0), 0)
     const newCompletedLessons = [...completedLessons, lessonId]
     const isCourseCompleted = newCompletedLessons.length >= totalLessons
+    const userId = firebaseAuth.currentUser?.uid
 
     try {
-      const { doc, updateDoc, arrayUnion } = await import("firebase/firestore")
+      const { doc, updateDoc, setDoc, getDoc, arrayUnion } = await import("firebase/firestore")
+
+      // 1. Update enrollment document
       const enrRef = doc(firebaseDb, "enrollments", enrollmentId)
-      
-      const updates: any = { completedLessons: arrayUnion(lessonId) }
+      const enrUpdates: any = { completedLessons: arrayUnion(lessonId) }
       if (isCourseCompleted) {
-        updates.status = "completed"
-        updates.completedAt = new Date().toISOString()
+        enrUpdates.status = "completed"
+        enrUpdates.completedAt = new Date().toISOString()
       }
-      
-      await updateDoc(enrRef, updates)
-      
-      toast.success("✅ Lesson marked complete! +10 XP")
-      if (isCourseCompleted) {
+      await updateDoc(enrRef, enrUpdates)
+
+      // 2. Grant XP and recalculate tier
+      const XP_PER_LESSON = 10
+      if (userId) {
+        const userRef = doc(firebaseDb, "users", userId)
+        const userSnap = await getDoc(userRef)
+        const currentXp = userSnap.exists() ? (userSnap.data()?.careerXp || 0) : 0
+        const newXp = currentXp + XP_PER_LESSON
+        const newTier = newXp >= 1000 ? "Master" : newXp >= 500 ? "Scholar" : newXp >= 100 ? "Explorer" : "Novice"
+        await setDoc(userRef, { careerXp: newXp, tier: newTier }, { merge: true })
+        toast.success(`✅ +${XP_PER_LESSON} XP Earned! (${newXp} total)`)
+      }
+
+      // 3. Save badge if course completed
+      if (isCourseCompleted && userId) {
+        const badgeRef = doc(firebaseDb, "users", userId, "badges", courseId)
+        const badgeSnap = await getDoc(badgeRef)
+        if (!badgeSnap.exists()) {
+          await setDoc(badgeRef, {
+            courseId,
+            courseTitle: (course as any).title || "Course",
+            earnedAt: new Date().toISOString(),
+          })
+        }
         toast.success("🏆 Course Completed! Badge Unlocked!", { duration: 5000 })
       }
 
-      // Also call server action for XP + badge in background (non-blocking)
-      const userId = firebaseAuth.currentUser?.uid
-      if (userId) {
-        markLessonComplete(enrollmentId, lessonId, userId, courseId, totalLessons)
-          .then(res => {
-            if (!res?.success) console.error("[Badge/XP] Server action failed:", res?.error)
-          })
-      }
     } catch (err: any) {
       console.error("[handleMarkComplete] Firestore write failed:", err)
       toast.error(`Could not save progress: ${err.message}`)
