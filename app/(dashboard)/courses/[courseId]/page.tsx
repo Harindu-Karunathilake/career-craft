@@ -319,10 +319,9 @@ export default function CourseDetailsPage() {
   return (
     <div className="h-[calc(100vh-2rem)] flex flex-col animate-in fade-in-50 duration-500">
 
-      {/* PayHere JS SDK */}
       <Script
         src="https://www.payhere.lk/lib/payhere.js"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
         onLoad={() => setPayhereReady(true)}
       />
 
