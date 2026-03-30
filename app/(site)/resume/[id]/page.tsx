@@ -9,11 +9,12 @@ import { doc, getDoc } from "firebase/firestore"
 import { useEffect, useState } from "react"
 import { useParams } from "next/navigation"
 import Image from "next/image"
-
+import { useDashboardPath } from "@/hooks/use-dashboard-path"
 import { motion } from "framer-motion"
 
 export default function ResumeResultPage() {
   const { id } = useParams();
+  const { resume: resumeDashboardPath } = useDashboardPath();
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -129,7 +130,7 @@ export default function ResumeResultPage() {
         
         {/* Nav */}
         <motion.div variants={itemVariants} className="flex items-center gap-4">
-            <Link href="/user/resume">
+            <Link href={resumeDashboardPath}>
                 <Button variant="ghost" className="text-white hover:bg-white/10 pl-0 hover:pl-2 transition-all">
                     <ArrowLeft className="mr-2 h-4 w-4" /> Back to Dashboard
                 </Button>

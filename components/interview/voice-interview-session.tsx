@@ -4,14 +4,16 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Bot, PhoneOff, Mic, MicOff } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, useCallback } from "react"
 import { useRouter } from "next/navigation"
-import { vapi } from "@/lib/vapi.sdk"
+import Vapi from "@vapi-ai/web"
 import { interviewer } from "@/constants/interview"
 import { generateFeedbackAction } from "@/lib/actions/feedback"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore"
 import { cn } from "@/lib/utils"
+import { useDashboardPath } from "@/hooks/use-dashboard-path"
+import toast from "react-hot-toast"
 
 enum CallStatus {
   INACTIVE = "INACTIVE",
@@ -30,159 +32,97 @@ interface VoiceInterviewSessionProps {
     interviewData: any;
 }
 
+let vapiSingleton: any = null;
+let globalHasStarted = false;
+
+// We will store the current React state setters here so the singleton can call them
+// even if the component remounts in Strict Mode.
+let setCallStatusGlobal: ((status: CallStatus) => void) | null = null;
+let setMessagesGlobal: ((updater: any) => void) | null = null;
+let setIsSpeakingGlobal: ((isSpeaking: boolean) => void) | null = null;
+let setLastMessageGlobal: ((msg: string) => void) | null = null;
+
+const getVapi = () => {
+    if (!vapiSingleton) {
+        const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
+        if (!token) return null;
+        vapiSingleton = new Vapi(token);
+
+        // Bind listeners globally ONCE
+        vapiSingleton.on("call-start", () => {
+            console.log("GLOBAL VAPI: call-start received!");
+            if (setCallStatusGlobal) setCallStatusGlobal(CallStatus.ACTIVE);
+        });
+        vapiSingleton.on("call-end", () => {
+            console.log("GLOBAL VAPI: call-end received!");
+            if (setCallStatusGlobal) setCallStatusGlobal(CallStatus.FINISHED);
+            globalHasStarted = false; // Reset for next time
+        });
+        vapiSingleton.on("message", (message: any) => {
+            console.log("GLOBAL VAPI: message received:", message.type, message.role);
+            if (message.type === "transcript" && message.transcriptType === "final") {
+                const newMessage = { role: message.role, content: message.transcript };
+                if (setMessagesGlobal) setMessagesGlobal((prev: any) => [...prev, newMessage]);
+                if (setLastMessageGlobal) setLastMessageGlobal(message.transcript);
+            }
+        });
+        vapiSingleton.on("speech-start", () => {
+            console.log("GLOBAL VAPI: speech-start received!");
+            if (setIsSpeakingGlobal) setIsSpeakingGlobal(true);
+        });
+        vapiSingleton.on("speech-end", () => {
+            console.log("GLOBAL VAPI: speech-end received!");
+            if (setIsSpeakingGlobal) setIsSpeakingGlobal(false);
+        });
+        vapiSingleton.on("error", (error: any) => {
+            console.error("GLOBAL VAPI: error received RAW:", error);
+            if (setCallStatusGlobal) setCallStatusGlobal(CallStatus.INACTIVE);
+            globalHasStarted = false; // Reset on error
+        });
+    }
+    return vapiSingleton;
+};
+
 export default function VoiceInterviewSession({ sessionId, interviewData }: VoiceInterviewSessionProps) {
     const router = useRouter();
+    const { interviews: interviewsDashboardPath } = useDashboardPath();
     
     const [callStatus, setCallStatus] = useState<CallStatus>(CallStatus.INACTIVE);
     const [messages, setMessages] = useState<SavedMessage[]>([]);
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [lastMessage, setLastMessage] = useState<string>("");
     const [isMuted, setIsMuted] = useState(false);
+    const vapiRef = useRef<any>(null);
+
+    // Update the global setters every time this component renders
+    // so the global Vapi instance always calls the *latest* React state setters.
+    useEffect(() => {
+        setCallStatusGlobal = setCallStatus;
+        setMessagesGlobal = setMessages;
+        setIsSpeakingGlobal = setIsSpeaking;
+        setLastMessageGlobal = setLastMessage;
+
+        return () => {
+            setCallStatusGlobal = null;
+            setMessagesGlobal = null;
+            setIsSpeakingGlobal = null;
+            setLastMessageGlobal = null;
+        };
+    }, []);
 
     // Use useCallback to prevent infinite loop in dependencies or move inside useEffect
     // Since startCall depends on interviewData which is a prop, we can define it inside or outside with useCallback.
-    // However, it also uses setCallStatus, etc.
-    
-    // We'll hoist the function definitions or move them inside useEffect. 
-    // Given the size, defining them before useEffect is cleaner but they use state setters.
-    // Actually, looking at the structure, it's better to move the effect that starts the call to AFTER the functions are defined,
-    // or use a ref mechanism if we want to avoid complex dependency arrays, but standard way is defining functions then effect.
-    
-    // Moving the functions up.
-    
-    const startCall = async (data: any) => {
-        const token = process.env.NEXT_PUBLIC_VAPI_WEB_TOKEN;
-        if (!token) {
-            console.error("Missing Vapi Web Token");
-            alert("Configuration Error: Missing Vapi Web Token.");
-            return;
-        }
-
-        try {
-            await navigator.mediaDevices.getUserMedia({ audio: true });
-        } catch (e) {
-            console.error("Microphone access denied:", e);
-            alert("Please allow microphone access to continue.");
-            return;
-        }
-
-        setCallStatus(CallStatus.CONNECTING);
-        try {
-            vapi.stop(); // Ensure any previous session is ended
-            // Prepare dynamic interviewer object
-            const questionsList = (data.questions || []).map((q: string, i: number) => `${i + 1}. ${q}`).join('\n');
-            
-            // Prepare context string
-            let contextString = "";
-            let personalizedGreeting = interviewer.firstMessage;
-
-            // Check if we actually have resume content
-            const hasResume = data.resumeContext?.fullText && data.resumeContext.fullText.length > 50;
-            const candidateName = data.resumeContext?.candidateName || "Candidate";
-
-            if (hasResume) {
-                contextString = `
-                Candidate Name: ${candidateName}
-                Candidate Summary: ${data.resumeContext.summary}
-                
-                RESUME CONTENT:
-                ${data.resumeContext.fullText}
-                
-                INSTRUCTIONS:
-                - Use the "RESUME CONTENT" above to ask specific, relevant follow-up questions.
-                - Address the candidate by name occasionally.
-                - Dig deep into their specific projects and experience mentioned in the resume text.
-                `;
-                
-                // Personalize the greeting for resume users
-                personalizedGreeting = `Hello ${candidateName}! Thank you for taking the time to speak with me today. I've reviewed your resume and I'm excited to discuss your experience with ${data.resumeContext.summary ? "your projects" : "us"}.`;
-            } else if (candidateName !== "Candidate") {
-                 personalizedGreeting = `Hello ${candidateName}! Thank you for joining me for this ${data.role} interview.`;
-            }
-
-            const modifiedInterviewer = {
-                ...interviewer,
-                firstMessage: personalizedGreeting,
-                model: {
-                    ...interviewer.model,
-                    messages: [
-                        {
-                            ...interviewer.model.messages[0],
-                            content: interviewer.model.messages[0].content
-                                .replace('{{questions}}', questionsList || "Ask general questions.")
-                                .replace('{{resumeContext}}', contextString)
-                        }
-                    ]
-                }
-            };
-
-            await vapi.start(modifiedInterviewer);
-        } catch (err: any) {
-            console.error("Failed to start call", err);
-            setCallStatus(CallStatus.INACTIVE);
-        }
-    };
-    
-    
-    useEffect(() => {
-        // Start call immediately on mount since we have data
-        startCall(interviewData);
-
-        const onCallStart = () => setCallStatus(CallStatus.ACTIVE);
-        const onCallEnd = () => setCallStatus(CallStatus.FINISHED);
-        
-        const onMessage = (message: any) => {
-            if (message.type === "transcript" && message.transcriptType === "final") {
-                const newMessage = { role: message.role, content: message.transcript };
-                setMessages((prev) => [...prev, newMessage]);
-                setLastMessage(message.transcript);
-            }
-        };
-
-        const onSpeechStart = () => setIsSpeaking(true);
-        const onSpeechEnd = () => setIsSpeaking(false);
-        const onError = (error: any) => {
-            console.error("Vapi Error RAW:", error);
-        };
-
-        vapi.on("call-start", onCallStart);
-        vapi.on("call-end", onCallEnd);
-        vapi.on("message", onMessage);
-        vapi.on("speech-start", onSpeechStart);
-        vapi.on("speech-end", onSpeechEnd);
-        vapi.on("error", onError);
-
-        return () => {
-            vapi.stop(); 
-            vapi.removeAllListeners();
-        };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []); // Keep empty dependency to run only once on mount, explicit disable is better than missing warning
-
-
-
-    const endCall = async () => {
-        vapi.stop();
-        setCallStatus(CallStatus.FINISHED);
-        await handleGenerateFeedback();
-    };
-
-    const toggleMute = () => {
-        const newMutedState = !isMuted;
-        vapi.setMuted(newMutedState);
-        setIsMuted(newMutedState);
-    }
-
-    const handleGenerateFeedback = async () => {
+    const handleGenerateFeedback = useCallback(async () => {
         const userId = firebaseAuth.currentUser?.uid;
         if (!userId) return;
 
         if (messages.length === 0) {
-            router.push('/user/interviews');
+            router.push(interviewsDashboardPath);
             return;
         }
 
         try {
+            toast.success("Call ended. Transitioning to feedback...");
             const result = await generateFeedbackAction({ transcript: messages });
             
             if (result.success && result.feedback) {
@@ -202,7 +142,93 @@ export default function VoiceInterviewSession({ sessionId, interviewData }: Voic
             console.error("Error saving feedback:", error);
             alert("Error saving interview results.");
         }
+    }, [messages, sessionId, interviewsDashboardPath, router]);
+
+    useEffect(() => {
+        const vapiInstance = getVapi();
+        if (!vapiInstance) {
+            console.error("Vapi: Failed to get singleton instance.");
+            return;
+        }
+        
+        vapiRef.current = vapiInstance;
+
+        // Start call logic scoped to this instance
+        const startDynamicCall = async () => {
+             // Use the global flag to prevent Strict Mode double-firing
+             if (globalHasStarted) {
+                 console.log("Vapi: globalHasStarted is true, skipping start.");
+                 return;
+             }
+             globalHasStarted = true;
+             
+             setCallStatus(CallStatus.CONNECTING);
+             try {
+                 const questionsList = (interviewData.questions || []).map((q: string, i: number) => `${i + 1}. ${q}`).join('\n');
+                 let contextString = "";
+                 let personalizedGreeting = interviewer.firstMessage;
+                 const hasResume = interviewData.resumeContext?.fullText && interviewData.resumeContext.fullText.length > 50;
+                 const candidateName = interviewData.resumeContext?.candidateName || "Candidate";
+
+                 if (hasResume) {
+                     contextString = `Candidate Name: ${candidateName}\nCandidate Summary: ${interviewData.resumeContext.summary}\nRESUME CONTENT:\n${interviewData.resumeContext.fullText}\nINSTRUCTIONS:\n- Use the RESUME CONTENT to ask follow-up questions.\n- Address the candidate by name.\n- Dig deep into their projects.`;
+                     personalizedGreeting = `Hello ${candidateName}! Thank you for taking the time to speak with me today. I've reviewed your resume and I'm excited to discuss your experience with ${interviewData.resumeContext.summary ? "your projects" : "us"}.`;
+                 } else if (candidateName !== "Candidate") {
+                      personalizedGreeting = `Hello ${candidateName}! Thank you for joining me for this ${interviewData.role} interview.`;
+                 }
+
+                 const modifiedInterviewer = {
+                     ...interviewer,
+                     firstMessage: personalizedGreeting,
+                     model: {
+                         ...interviewer.model,
+                         messages: [
+                             {
+                                 ...interviewer.model.messages[0],
+                                 content: interviewer.model.messages[0].content
+                                     .replace('{{questions}}', questionsList || "Ask general questions.")
+                                     .replace('{{resumeContext}}', contextString)
+                             }
+                         ]
+                     }
+                 };
+
+                 console.log("Vapi: About to call vapiInstance.start()...");
+                 const startResult = await vapiInstance.start(modifiedInterviewer);
+                 console.log("Vapi: vapiInstance.start() Promise resolved with:", startResult); 
+             } catch (err: any) {
+                 console.error("Vapi: Failed to start instance call (Caught exception):", err);
+                 setCallStatus(CallStatus.INACTIVE);
+                 globalHasStarted = false;
+             }
+        };
+
+        startDynamicCall();
+
+        // No cleanup needed for listeners because they are global!
+        return () => {
+            console.log("Vapi: useEffect unmounting, keeping global listeners intact.");
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // Run on mount
+
+
+
+    const endCall = async () => {
+        if (vapiRef.current) {
+            vapiRef.current.stop();
+        }
+        setCallStatus(CallStatus.FINISHED);
+        await handleGenerateFeedback();
     };
+
+    const toggleMute = () => {
+        const newMutedState = !isMuted;
+        if (vapiRef.current) {
+            vapiRef.current.setMuted(newMutedState);
+        }
+        setIsMuted(newMutedState);
+    }
 
     return (
         <main className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-black font-sans">

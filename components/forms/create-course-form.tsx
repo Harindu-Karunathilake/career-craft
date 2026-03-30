@@ -1,11 +1,11 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
-import { addDoc, collection, serverTimestamp } from "firebase/firestore"
+import { addDoc, collection, serverTimestamp, doc, getDoc } from "firebase/firestore"
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
 import { firebaseDb, firebaseAuth, firebaseStorage } from "@/lib/firebase"
 
@@ -22,7 +22,7 @@ import {
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2 } from "lucide-react"
+import { Loader2, Lock } from "lucide-react"
 
 import { CourseBuilder } from "./course-builder"
 import { Chapter } from "@/types"
@@ -59,6 +59,26 @@ export function CreateCourseForm({ initialData }: CreateCourseFormProps) {
   const [error, setError] = useState<string | null>(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [chapters, setChapters] = useState<Chapter[]>(initialData?.chapters || [])
+  const [userStatus, setUserStatus] = useState<string | null>(null)
+  const [checkingStatus, setCheckingStatus] = useState(true)
+
+  useEffect(() => {
+    async function checkUserStatus() {
+        const user = firebaseAuth.currentUser;
+        if (user) {
+            try {
+                const userDoc = await getDoc(doc(firebaseDb, "users", user.uid));
+                if (userDoc.exists()) {
+                    setUserStatus(userDoc.data().status);
+                }
+            } catch (err) {
+                console.error("Error fetching user status:", err);
+            }
+        }
+        setCheckingStatus(false);
+    }
+    checkUserStatus();
+  }, []);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema) as any,
@@ -109,6 +129,11 @@ export function CreateCourseForm({ initialData }: CreateCourseFormProps) {
         return
       }
 
+      if (userStatus !== 'active') {
+          setError("Your tutor account must be verified by an admin before you can publish courses.")
+          return
+      }
+
       if (initialData) {
           // Update existing course
           const { doc, updateDoc } = await import("firebase/firestore")
@@ -141,6 +166,8 @@ export function CreateCourseForm({ initialData }: CreateCourseFormProps) {
     }
   }
 
+  const isRestricted = !checkingStatus && userStatus !== 'active';
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 max-w-4xl">
@@ -150,9 +177,20 @@ export function CreateCourseForm({ initialData }: CreateCourseFormProps) {
              <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
+
+        {isRestricted && (
+            <Alert className="border-yellow-500/50 bg-yellow-500/10 text-yellow-500">
+                <Lock className="h-4 w-4" />
+                <AlertTitle>Verification Required</AlertTitle>
+                <AlertDescription>
+                    Your tutor account is currently <strong>{userStatus || "pending"}</strong>. 
+                    You must be verified by an admin before you can delete or publish courses.
+                </AlertDescription>
+            </Alert>
+        )}
         
         <div className="grid gap-8 md:grid-cols-2">
-            <div className="space-y-8">
+            <div className={`space-y-8 ${isRestricted ? "opacity-60 pointer-events-none" : ""}`}>
                 <FormField
                 control={form.control}
                 name="title"
@@ -218,7 +256,7 @@ export function CreateCourseForm({ initialData }: CreateCourseFormProps) {
                     name="price"
                     render={({ field }) => (
                         <FormItem>
-                        <FormLabel>Price ($)</FormLabel>
+                        <FormLabel>Price (LKR)</FormLabel>
                         <FormControl>
                             <Input type="number" min="0" step="0.01" {...field} />
                         </FormControl>
@@ -231,12 +269,12 @@ export function CreateCourseForm({ initialData }: CreateCourseFormProps) {
                     />
             </div>
 
-            <div className="space-y-8">
+            <div className={`space-y-8 ${isRestricted ? "opacity-60 pointer-events-none" : ""}`}>
                  <CourseBuilder chapters={chapters} setChapters={setChapters} />
             </div>
         </div>
 
-        <Button type="submit" disabled={isSubmitting || uploadingImage} size="lg" className="w-full md:w-auto">
+        <Button type="submit" disabled={isSubmitting || uploadingImage || isRestricted} size="lg" className="w-full md:w-auto">
           {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
           {initialData ? "Save Changes" : "Publish Course"}
         </Button>

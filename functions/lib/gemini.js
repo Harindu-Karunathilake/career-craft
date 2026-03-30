@@ -2,7 +2,8 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.generateQuestion = exports.generateFeedback = void 0;
 const generative_ai_1 = require("@google/generative-ai");
-const apiKey = process.env.GEMINI_API_KEY || "";
+const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || "";
+console.log("DEBUG: Using API Key:", apiKey.substring(0, 10) + "...");
 const genAI = new generative_ai_1.GoogleGenerativeAI(apiKey);
 const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 async function generateFeedback(problemContext, userCode, executionResult) {
@@ -68,7 +69,7 @@ async function generateFeedback(problemContext, userCode, executionResult) {
     }
 }
 exports.generateFeedback = generateFeedback;
-async function generateQuestion(_role, _experience, _topic) {
+async function generateQuestion() {
     // Helper to generate the initial question if needed by backend, 
     // though currently frontend handles generic question generation via /api/interview/generate.
     // This connects to the same logic if we move it to Cloud Functions.

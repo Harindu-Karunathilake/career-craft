@@ -6,20 +6,15 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { UploadCloud, FileText, CheckCircle2, Loader2, Play } from "lucide-react"
-import { useState, ChangeEvent } from "react"
-import { usePuterStore } from "@/lib/puter"
+import { useState, ChangeEvent, useEffect } from "react"
 import { convertPdfToImage } from "@/lib/pdf2img"
-import { prepareInstructions } from "@/constants/resume-analysis"
 import { firebaseDb, firebaseAuth } from "@/lib/firebase"
 import { doc, setDoc, collection } from "firebase/firestore"
 import { useRouter } from "next/navigation"
-import { useEffect } from "react"
 import { extractTextFromPdf } from "@/lib/pdf2text";
-
 import { motion } from "framer-motion"
 
 export default function ResumeAnalyzePage() {
-  const { auth, ai, init } = usePuterStore();
   const [file, setFile] = useState<File | null>(null);
   const [jobTitle, setJobTitle] = useState("");
   const [companyName, setCompanyName] = useState("");
@@ -30,17 +25,11 @@ export default function ResumeAnalyzePage() {
   const router = useRouter();
 
   useEffect(() => {
-    init();
     const unsubscribe = firebaseAuth.onAuthStateChanged((user) => {
-        if (user) {
-            setCurrentUser(user);
-        } else {
-            setCurrentUser(null);
-            // Optional: Redirect to login or show non-blocking alert
-        }
+        setCurrentUser(user ?? null);
     });
     return () => unsubscribe();
-  }, [init]);
+  }, []);
 
   const handleFileChange = (e: ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -61,146 +50,75 @@ export default function ResumeAnalyzePage() {
 
   const handleAnalyze = async () => {
     if (!file || !jobTitle || !companyName || !jobDescription) return;
-    
-    // Puter Auth Check
-    if (!auth.isAuthenticated) {
-        setStatusText("Please sign in to Puter.js...");
-        await auth.signIn();
-        // Wait for auth to complete? The hook might handle state, but let's re-check
-        // In a real flow we might need to wait or rely on the updated state.
-        // For now, let's assume sign-in is a blocking popup or flow.
-    }
-    
-    // Re-check auth or proceed if we assume success (or let user click again)
-    // Ideally we should wait for auth.isAuthenticated to be true, but that's async via effect.
-    // For this attempt, we'll try to proceed, if it fails, error will be caught.
 
     setIsAnalyzing(true);
     setStatusText("Initializing analysis...");
 
     try {
         const userId = currentUser?.uid;
-        
         if (!userId) {
             setStatusText("Please log in to continue.");
-            // Optionally redirect here if you want to force it
-            // router.push("/login?next=/resume/analyze"); 
+            setIsAnalyzing(false);
             return;
         }
 
-        // 1. Extract Text Locally (Bypass Puter FS)
-        setStatusText("Extracting text from resume...");
-        let resumeText = "";
-        try {
-            resumeText = await extractTextFromPdf(file);
-            console.log("Text extraction successful, length:", resumeText.length);
-        } catch (err) {
-            console.error("Text extraction failed:", err);
+        const token = await currentUser.getIdToken();
+
+        // 1. PARALLEL: Extract text + convert to image simultaneously
+        setStatusText("Processing document...");
+        const [resumeTextResult, imageResult] = await Promise.allSettled([
+            extractTextFromPdf(file),
+            convertPdfToImage(file),
+        ]);
+
+        if (resumeTextResult.status === "rejected") {
             throw new Error("Failed to extract text from PDF. Please try a different file.");
         }
+        const resumeText = resumeTextResult.value;
 
-        // 2. Convert to Image (for visual preview)
-        setStatusText("Processing document...");
-        const imageResult = await convertPdfToImage(file);
-        if (!imageResult.file) {
-            console.error("PDF Conversion Error:", imageResult.error);
-            throw new Error(`Failed to convert PDF: ${imageResult.error}`);
+        if (imageResult.status === "rejected" || !imageResult.value.file) {
+            throw new Error(`Failed to convert PDF: ${imageResult.status === "rejected" ? imageResult.reason : imageResult.value.error}`);
         }
+        const imageFile = imageResult.value.file;
 
-        // 3. Upload to Firebase Storage (via Encrypted API)
+        // 2. PARALLEL: Upload resume + image simultaneously
         setStatusText("Encrypting and saving documents...");
-        
         const uploadFile = async (fileToUpload: File) => {
             const formData = new FormData();
             formData.append("file", fileToUpload);
-            
-            // Get current auth token
-            const token = await currentUser.getIdToken();
-            
             const res = await fetch("/api/resumes/upload", {
                 method: "POST",
-                headers: {
-                    "Authorization": `Bearer ${token}`
-                },
-                body: formData
+                headers: { "Authorization": `Bearer ${token}` },
+                body: formData,
             });
-            
-            if (!res.ok) {
-                const errorText = await res.text();
-                console.error("Upload API Error:", res.status, errorText);
-                throw new Error(`Upload failed: ${res.status} ${errorText}`);
-            }
+            if (!res.ok) throw new Error(`Upload failed: ${res.status} ${await res.text()}`);
             return res.json();
         };
 
-        const [resumeUpload, imageUpload] = await Promise.all([
+        // 3. PARALLEL: Run AI analysis alongside file uploads
+        setStatusText("Analyzing resume against job description...");
+        const [resumeUpload, imageUpload, analysisRes] = await Promise.all([
             uploadFile(file),
-            uploadFile(imageResult.file)
+            uploadFile(imageFile),
+            fetch("/api/resumes/analyze", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ resumeText, jobTitle, jobDescription }),
+            }),
         ]);
 
-        const resumeUrl = resumeUpload.storagePath; // Stores path, not URL
+        if (!analysisRes.ok) {
+            const err = await analysisRes.json();
+            throw new Error(err.error || "Analysis failed");
+        }
+        const { analysis: analysisData } = await analysisRes.json();
+
+        const resumeUrl = resumeUpload.storagePath;
         const imageUrl = imageUpload.storagePath;
 
-        // 4. Run AI Analysis
-
-
-        // 4. Run AI Analysis
-        setStatusText("Analyzing content against job description...");
-        
-        // Debug: Log extracted text details
-        console.log(`Resume Text Length: ${resumeText.length}`);
-        console.log(`Resume Text Snippet: ${resumeText.substring(0, 200)}...`);
-
-        // Debug: Test AI Connectivity
-        try {
-            console.log("Testing AI connectivity with simple prompt...");
-            const testResponse = await ai.chat("Hello, are you working?");
-            console.log("AI Test Response:", testResponse);
-        } catch (testError) {
-            console.error("AI Connectivity Test Failed:", testError);
-        }
-
-        // Construct the prompt manually since we are using raw text
-        const instructions = prepareInstructions({ jobTitle, jobDescription });
-        const fullPrompt = `
-RESUME CONTENT:
-${resumeText}
-
-${instructions}
-        `.trim();
-
-        console.log("Sending full analysis prompt to AI...");
-        const feedback = await ai.chat(fullPrompt);
-        
-        console.log("AI Feedback Result:", feedback);
-
-        if (!feedback) {
-            console.error("AI returned null/undefined feedback");
-            throw new Error("AI Analysis failed (No response)");
-        }
-
-
-        const feedbackText = typeof feedback.message.content === 'string'
-            ? feedback.message.content
-            : feedback.message.content[0].text;
-
-        // Parse JSON
-        const jsonMatch = feedbackText.match(/```json\s*([\s\S]*?)\s*```/) || feedbackText.match(/```\s*([\s\S]*?)\s*```/);
-        const jsonString = jsonMatch ? jsonMatch[1] : feedbackText;
-        let analysisData;
-        try {
-            analysisData = JSON.parse(jsonString);
-        } catch (e) {
-            console.error(e);
-            // Fallback or retry? For now, throw.
-            throw new Error("Failed to parse AI response");
-        }
-
-        // 5. Save to Firestore
+        // 4. Save to Firestore
         setStatusText("Finalizing results...");
         const resumeId = doc(collection(firebaseDb, "users", userId, "resumes")).id;
-        
-        console.log("Saving to Firestore:", { resumeUrl, imageUrl });
 
         await setDoc(doc(firebaseDb, "users", userId, "resumes", resumeId), {
             id: resumeId,
@@ -210,18 +128,17 @@ ${instructions}
             imageUrl,
             resumeUrl,
             analysis: analysisData,
-            isEncrypted: true, // Flag new encryption
+            isEncrypted: true,
             createdAt: new Date().toISOString(),
         });
 
-        // 6. Redirect
         setStatusText("Done!");
         router.push(`/resume/${resumeId}`);
 
     } catch (error: any) {
         console.error("Analysis Error:", error);
         setStatusText(`Error: ${error.message || "Something went wrong"}`);
-        setIsAnalyzing(false); // Stop loading so user can retry
+        setIsAnalyzing(false);
     }
   };
 
@@ -385,9 +302,9 @@ ${instructions}
                 </motion.p>
             )}
 
-            {!auth.isAuthenticated && (
+            {!currentUser && (
                 <p className="text-xs text-white/40">
-                    Note: Analysis is powered by Puter.js and requires a separate sign-in.
+                    Please log in to analyze your resume.
                 </p>
             )}
         </motion.div>

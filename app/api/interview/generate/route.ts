@@ -1,8 +1,31 @@
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
+import { cacheGet, cacheSet } from '@/lib/redis';
 
 export const maxDuration = 30;
+
+// 12-hour TTL: questions for the same params are stable
+const CACHE_TTL = 60 * 60 * 12;
+
+function buildCacheKey(params: {
+    role: string;
+    experience: string;
+    topic: string;
+    type: string;
+    questionCount: number;
+    interviewMode: string;
+}): string {
+    const normalized = JSON.stringify([
+        (params.role ?? '').trim().toLowerCase(),
+        (params.experience ?? '').trim().toLowerCase(),
+        (params.topic ?? '').trim().toLowerCase(),
+        (params.type ?? '').trim().toLowerCase(),
+        params.questionCount,
+        (params.interviewMode ?? '').trim().toLowerCase(),
+    ]);
+    return `interview-questions:${Buffer.from(normalized).toString('base64')}`;
+}
 
 export async function POST(req: Request) {
     try {
@@ -14,11 +37,23 @@ export async function POST(req: Request) {
         const { role, experience, topic, type, questionCount, interviewMode } = await req.json();
         console.log("API /generate RECEIVED:", { role, type, interviewMode });
 
-        // Retry logic for rate limits
+        // ── Cache check ──────────────────────────────────────────────────────
+        const cacheKey = buildCacheKey({ role, experience, topic, type, questionCount, interviewMode });
+        const cached = await cacheGet(cacheKey);
+        if (cached) {
+            console.log("[Cache HIT] interview-questions:", cacheKey);
+            return new Response(cached, {
+                status: 200,
+                headers: { 'Content-Type': 'application/json', 'X-Cache': 'HIT' },
+            });
+        }
+        console.log("[Cache MISS] interview-questions:", cacheKey);
+
+        // ── Generate via Gemini ──────────────────────────────────────────────
         const generateWithRetry = async (retries = 3, delay = 1000) => {
             try {
                 return await generateObject({
-                    model: google('gemini-2.5-flash'), // Fallback to standard 1.0 Pro
+                    model: google('gemini-2.5-flash'),
                     schema: z.object({
                         questions: z.array(z.string()),
                     }),
@@ -58,10 +93,14 @@ export async function POST(req: Request) {
         };
 
         const result = await generateWithRetry();
+        const responseBody = JSON.stringify({ questions: result.object.questions });
 
-        return new Response(JSON.stringify({ questions: result.object.questions }), {
+        // ── Store in cache ───────────────────────────────────────────────────
+        await cacheSet(cacheKey, responseBody, CACHE_TTL);
+
+        return new Response(responseBody, {
             status: 200,
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'X-Cache': 'MISS' },
         });
 
     } catch (error) {

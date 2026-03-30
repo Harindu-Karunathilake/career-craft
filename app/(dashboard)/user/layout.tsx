@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { UserSidebar } from "@/components/dashboard/user-sidebar"
 import { DashboardHeaderActions } from "@/components/dashboard/dashboard-header-actions"
+import { GlobalBackground } from "@/components/ui/global-background"
 
 export default function UserDashboardLayout({
   children,
@@ -10,7 +11,8 @@ export default function UserDashboardLayout({
   children: ReactNode
 }) {
   return (
-    <SidebarProvider className="user-dashboard-theme">
+    <SidebarProvider className="user-dashboard-theme bg-black relative overflow-x-hidden">
+      <GlobalBackground />
       <style dangerouslySetInnerHTML={{ __html: `
         .user-dashboard-theme {
           --primary: oklch(0.623 0.17 290);
@@ -26,16 +28,16 @@ export default function UserDashboardLayout({
         }
       `}} />
       <UserSidebar />
-      <SidebarInset className="bg-background text-foreground">
-        <header className="sticky top-0 z-10 glass flex flex-wrap items-center justify-between gap-4 border-b px-6 py-4">
+      <SidebarInset className="bg-transparent text-white relative z-10 w-full">
+        <header className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-4 border-b border-white/10 bg-black/40 backdrop-blur-xl px-6 py-4">
           <div className="flex items-center gap-4">
             <SidebarTrigger className="-ml-2" />
             <div>
               <p className="text-xs uppercase tracking-[0.35em] text-primary/80">User Interviews</p>
-              <p className="text-lg font-semibold">Career progress</p>
+              <p className="text-lg font-semibold text-white">Career progress</p>
             </div>
           </div>
-          <div className="flex flex-col items-end gap-3 text-xs text-muted-foreground">
+          <div className="flex flex-col items-end gap-3 text-xs text-white/60">
             <p>Last synced moments ago</p>
             <DashboardHeaderActions />
           </div>

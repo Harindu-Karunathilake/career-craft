@@ -1,0 +1,24 @@
+[baseline-browser-mapping] The data in this module is over two months old.  To ensure accurate Baseline data, please update: `npm i baseline-browser-mapping@latest -D`
+[0m[7m[1m[31m FAIL [39m[22m[27m[0m [2m__tests__/app/api/contact/[22m[1mroute.test.ts[22m
+  [1m● [22mTest suite failed to run
+
+    ReferenceError: Request is not defined
+
+    [0m [90m  9 |[39m
+     [90m 10 |[39m         [36mif[39m ([33m![39mname [33m||[39m [33m![39memail [33m||[39m [33m![39mtopic [33m||[39m [33m![39mmessage) {
+    [31m[1m>[22m[39m[90m 11 |[39m             [36mreturn[39m [33mNextResponse[39m[33m.[39mjson(
+     [90m    |[39m                 [31m[1m^[22m[39m
+     [90m 12 |[39m                 { error[33m:[39m [32m"Missing required fields"[39m }[33m,[39m
+     [90m 13 |[39m                 { status[33m:[39m [35m400[39m }
+     [90m 14 |[39m             )[0m
+
+      [2mat Object.Request ([22mnode_modules/next/src/server/web/spec-extension/request.ts[2m:14:34)[22m
+      [2mat Object.<anonymous> ([22mnode_modules/next/server.js[2m:2:16)[22m
+      [2mat Object.<anonymous> ([22mapp/api/contact/route.ts[2m:11:17)[22m
+      [2mat Object.<anonymous> ([22m[0m[36m__tests__/app/api/contact/route.test.ts[39m[0m[2m:23:16)[22m
+
+[1mTest Suites: [22m[1m[31m1 failed[39m[22m, 1 total
+[1mTests:       [22m0 total
+[1mSnapshots:   [22m0 total
+[1mTime:[22m        1.463 s
+[2mRan all test suites[22m[2m matching [22m__tests__/app/api/contact/route.test.ts[2m.[22m

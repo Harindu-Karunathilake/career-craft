@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Briefcase, FileText, LayoutDashboard, Settings, BookOpen } from "lucide-react"
+import { Briefcase, FileText, LayoutDashboard, Settings, BookOpen, Wallet } from "lucide-react"
 
 import {
   Sidebar,
@@ -48,6 +48,12 @@ const navItems = [
     href: "/tutor/community",
     icon: Briefcase,
     description: "Browse published interviews",
+  },
+  {
+    title: "Earnings",
+    href: "/tutor/earnings",
+    icon: Wallet,
+    description: "Earnings & payout requests",
   },
   {
     title: "Settings",

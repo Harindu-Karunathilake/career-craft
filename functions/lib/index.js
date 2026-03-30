@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.submitCode = exports.startInterview = void 0;
+exports.submitCode = exports.startInterview = exports.onUserStatusChanged = void 0;
 const dotenv = require("dotenv");
 dotenv.config();
 const functions = require("firebase-functions");
@@ -8,6 +8,7 @@ const admin = require("firebase-admin");
 const firestore_1 = require("firebase-admin/firestore");
 const execution_1 = require("./execution");
 const gemini_1 = require("./gemini");
+const email_service_1 = require("./email-service");
 // Initialize Admin SDK
 if (process.env.FUNCTIONS_EMULATOR) {
     process.env.FIRESTORE_EMULATOR_HOST = "127.0.0.1:8081";
@@ -18,6 +19,25 @@ if (admin.apps.length === 0) {
 }
 const db = admin.firestore();
 console.log("Functions initialized. GEMINI_API_KEY present:", !!process.env.GEMINI_API_KEY);
+exports.onUserStatusChanged = functions.firestore
+    .document("users/{userId}")
+    .onUpdate(async (change, context) => {
+    const after = change.after.data();
+    const before = change.before.data();
+    // Check if status changed
+    if (after.status !== before.status) {
+        // Only strictly for tutors or if the previous status was pending
+        // But usually we just want to notify anyone who gets verified/rejected if they are a tutor
+        if (after.role === 'tutor' && (after.status === 'active' || after.status === 'rejected')) {
+            if (after.email && after.name) {
+                await (0, email_service_1.sendStatusEmail)(after.email, after.name, after.status);
+            }
+            else {
+                console.warn(`User ${context.params.userId} status changed but missing email/name.`);
+            }
+        }
+    }
+});
 exports.startInterview = functions.https.onCall(async (data, context) => {
     if (!context.auth) {
         throw new functions.https.HttpsError("unauthenticated", "User must be logged in.");
