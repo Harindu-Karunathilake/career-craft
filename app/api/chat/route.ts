@@ -1,3 +1,4 @@
+import { DEFAULT_AI_MODEL } from '@/constants/ai';
 import { google } from '@ai-sdk/google';
 import { streamText, tool } from 'ai';
 import { z } from 'zod';
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
 
 
         const result = streamText({
-            model: google('gemini-2.5-flash'),
+            model: google(DEFAULT_AI_MODEL),
             messages,
             system: `You are a friendly and professional interviewer assistant for CareerCraft. 
         Your goal is to help the user set up a mock interview session.

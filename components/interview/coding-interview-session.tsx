@@ -1,13 +1,16 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Loader2, Mic, MicOff, Bot, Square } from "lucide-react";
 import CodeEditor from "./code-editor";
 import ChatInterface from "./chat-interface";
 import Timer from "./timer";
-import { doc, onSnapshot, updateDoc } from "firebase/firestore";
+import { doc, onSnapshot, updateDoc, collection, addDoc } from "firebase/firestore";
 import { firebaseDb, firebaseAuth } from "@/lib/firebase";
-// Actually, I'll use a simple timeout for autosave logic inside useEffect since I don't want to rely on unknown hooks.
+import { useTutorStore } from "@/hooks/use-tutor-store";
+import { startAITutor, stopAITutor, setAITutorMuted, syncCodeContextWithAI } from "@/lib/vapi-tutor";
+import { useCodeAnalysis } from "@/hooks/use-code-analysis";
+import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
 
 interface CodingInterviewSessionProps {
     sessionId: string;
@@ -18,23 +21,44 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     const [loading, setLoading] = useState(true);
     const [messages, setMessages] = useState<any[]>(interviewData.messages || []);
     const [code, setCode] = useState(interviewData.code || "// Write your solution here\n");
-    // Use state to store the fallback start time so it remains constant across renders
     const [fallbackStartTime] = useState(() => Date.now());
+    const [lastTypingTime, setLastTypingTime] = useState(() => Date.now());
+    
+    // LiveKit State
+    const [lkToken, setLkToken] = useState("");
+    const lkServerUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+
+    // AI Tutor State
+    const { isAIActive, isMuted } = useTutorStore();
+    const { analyzeCode, isAnalyzing } = useCodeAnalysis();
+    // Track previous code to avoid syncing unchanged content
+    const lastSyncedCodeRef = useRef<string>("");
+
+    useEffect(() => {
+        const fetchLkToken = async () => {
+            try {
+                const username = "User_" + Math.floor(Math.random() * 1000);
+                const res = await fetch(`/api/livekit/token?room=${sessionId}&username=${username}`);
+                const data = await res.json();
+                if (data.token) {
+                    setLkToken(data.token);
+                }
+            } catch (e) {
+                console.error("LiveKit token not available", e);
+            }
+        };
+        fetchLkToken();
+    }, [sessionId]);
 
     useEffect(() => {
         const userId = firebaseAuth.currentUser?.uid;
         if (!userId) return;
 
-        // Listen for real-time updates (AI responses, status changes)
         const unsubscribe = onSnapshot(doc(firebaseDb, "users", userId, "interviews", sessionId), async (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
-                
-                // If we have questions but no messages, inject the first question
                 if ((!data.messages || data.messages.length === 0) && data.questions && data.questions.length > 0) {
                      const firstQuestion = data.questions[0];
-                     // We need to update the DB, not just local state, so it persists
-                     // Use a flag or check to prevent infinite loops (though length === 0 check handles it)
                      try {
                          await updateDoc(doc(firebaseDb, "users", userId, "interviews", sessionId), {
                              messages: [{
@@ -44,7 +68,6 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                              }],
                              currentQuestionIndex: 0
                          });
-                         // No need to setMessages here, the snapshot listener will fire again with the new data
                      } catch (e) {
                          console.error("Failed to inject first question", e);
                      }
@@ -58,6 +81,23 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
         return () => unsubscribe();
     }, [sessionId]);
 
+    // Track AI messages from Zustand and store in Firebase Logs
+    useEffect(() => {
+        const storeMessages = useTutorStore.getState().messages;
+        if (storeMessages.length > 0) {
+            const lastMsg = storeMessages[storeMessages.length - 1];
+            // Only add to firestore if it's new (prevent duplicate saves by checking timestamp roughly)
+            const userId = firebaseAuth.currentUser?.uid;
+            if (userId) {
+                addDoc(collection(firebaseDb, "users", userId, "interviews", sessionId, "session_logs"), {
+                    ...lastMsg,
+                    codeSnapshot: code,
+                    savedAt: Date.now()
+                }).catch(e => console.error("Firebase log error", e));
+            }
+        }
+    }, [sessionId, code]);
+
     // Auto-save logic
     useEffect(() => {
         const userId = firebaseAuth.currentUser?.uid;
@@ -65,35 +105,75 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
 
         const saveTimeout = setTimeout(async () => {
              try {
-                // Only save if changed (simple check? No, Firestore write is cheap enough for 10s debounce)
-                // Actually, code changes on every keystroke.
-                // We should check if it's different from what we loaded? 
-                // For now, just save.
                 await updateDoc(doc(firebaseDb, "users", userId, "interviews", sessionId), {
                     code: code
                 });
-                console.log("Auto-saved code");
              } catch (err) {
                  console.error("Auto-save failed", err);
              }
-        }, 10000); // 10 seconds debounce
+        }, 10000);
 
         return () => clearTimeout(saveTimeout);
     }, [code, sessionId]);
 
+    // Live code sync — debounced 3s after the user stops typing
+    useEffect(() => {
+        if (!isAIActive) return;
+        if (code === lastSyncedCodeRef.current) return; // No change, skip
+
+        const syncTimeout = setTimeout(() => {
+            const currentQuestion = interviewData?.questions?.[0] || "General programming";
+            syncCodeContextWithAI(code, currentQuestion);
+            lastSyncedCodeRef.current = code;
+        }, 3000); // 3 second debounce
+
+        return () => clearTimeout(syncTimeout);
+    }, [code, isAIActive, interviewData]);
+
+    useEffect(() => {
+        const interval = setInterval(async () => {
+            const timeSinceLastTyping = Date.now() - lastTypingTime;
+            if (isAIActive && timeSinceLastTyping > 30000) { // 30s
+                const currentQuestion = interviewData?.questions?.[0] || "General programming";
+                const hint = await analyzeCode(code, currentQuestion);
+                if (hint) {
+                    syncCodeContextWithAI(code, currentQuestion);
+                }
+            }
+        }, 10000);
+        return () => clearInterval(interval);
+    }, [isAIActive, lastTypingTime, code, analyzeCode, interviewData]);
+
+    const handleCodeChange = (newCode: string) => {
+        setCode(newCode);
+        setLastTypingTime(Date.now());
+    };
+
+    const handleAskAI = async () => {
+        const currentQuestion = interviewData?.questions?.[0] || "General programming";
+        if (!isAIActive) {
+            startAITutor(code, currentQuestion);
+        } else {
+            const hint = await analyzeCode(code, currentQuestion);
+            if (hint) {
+                syncCodeContextWithAI(code, currentQuestion);
+            }
+        }
+    };
+
     const handleEndInterview = async () => {
         if (!confirm("Are you sure you want to end the interview early?")) return;
-        
+
         try {
             const userId = firebaseAuth.currentUser?.uid;
             if (!userId) return;
+
+            stopAITutor();
 
             await updateDoc(doc(firebaseDb, "users", userId, "interviews", sessionId), {
                 status: "completed",
                 completedAt: Date.now()
             });
-            
-            // The snapshot listener will pick up the status change/redirect, or we can force it
             window.location.href = `/interview/${sessionId}/feedback`;
         } catch (error) {
             console.error("Failed to end interview:", error);
@@ -104,15 +184,48 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
        return <div className="flex bg-black h-screen items-center justify-center text-white"><Loader2 className="animate-spin" /></div>;
     }
 
-    return (
+    const InnerContent = (
         <div className="flex h-screen w-full bg-black flex-col md:flex-row overflow-hidden">
-            {/* Left: Code Editor (60%) */}
+            {/* Left: Code Editor */}
             <div className="hidden md:flex flex-1 flex-col border-r border-white/10 bg-[#1e1e1e]">
                  <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-[#252526]">
                     <div className="flex items-center gap-4">
                         <div className="text-sm font-medium text-white/80">Main.js</div>
                         <Timer startTime={interviewData.createdAt?.seconds ? interviewData.createdAt.seconds * 1000 : fallbackStartTime} />
                     </div>
+                    
+                    {/* AI Controls */}
+                    <div className="flex items-center gap-2">
+                        <button
+                            onClick={handleAskAI}
+                            disabled={isAnalyzing}
+                            className={`flex items-center gap-1 px-3 py-1.5 text-xs rounded transition-colors ${
+                                isAIActive ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-500/30"
+                            }`}
+                        >
+                            {isAnalyzing ? <Loader2 className="h-3 w-3 animate-spin" /> : <Bot className="h-3 w-3" />}
+                            {isAIActive ? "AI Connected" : "Ask AI Tutor"}
+                        </button>
+                        
+                        {isAIActive && (
+                            <>
+                                <button
+                                    onClick={() => setAITutorMuted(!isMuted)}
+                                    className={`p-1.5 rounded border transition-colors ${isMuted ? "bg-red-500/20 text-red-400 border-red-500/30" : "bg-white/10 text-white/80 border-white/20 hover:bg-white/20"}`}
+                                >
+                                    {isMuted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+                                </button>
+                                <button
+                                    onClick={stopAITutor}
+                                    className="p-1.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 transition-colors"
+                                    title="Stop AI"
+                                >
+                                    <Square className="h-4 w-4" />
+                                </button>
+                            </>
+                        )}
+                    </div>
+
                     <div className="flex items-center gap-4">
                          <div className="text-xs text-white/40">Auto-saving...</div>
                          <button 
@@ -127,12 +240,12 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                     <CodeEditor 
                         initialCode={code} 
                         sessionId={sessionId} 
-                        onChange={(newCode) => setCode(newCode)} 
+                        onChange={handleCodeChange} 
                     />
                  </div>
             </div>
 
-            {/* Right: Chat / Interviewer (40%) */}
+            {/* Right: Chat / Interviewer */}
             <div className="w-full md:w-[450px] flex flex-col bg-zinc-900/50 border-l border-white/10 backdrop-blur-sm">
                 <ChatInterface 
                     sessionId={sessionId} 
@@ -143,4 +256,22 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
             </div>
         </div>
     );
+
+    // Conditionally wrap with LiveKitRoom if token and server exist
+    if (lkToken && lkServerUrl) {
+        return (
+            <LiveKitRoom
+                token={lkToken}
+                serverUrl={lkServerUrl}
+                connect={true}
+                audio={true}
+                video={false}
+            >
+                {InnerContent}
+                <RoomAudioRenderer />
+            </LiveKitRoom>
+        );
+    }
+
+    return InnerContent;
 }

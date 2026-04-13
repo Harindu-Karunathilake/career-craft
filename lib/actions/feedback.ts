@@ -1,5 +1,6 @@
 "use server";
 
+import { DEFAULT_AI_MODEL } from '@/constants/ai';
 import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { feedbackSchema } from "@/constants/interview";
@@ -22,7 +23,7 @@ export async function generateFeedbackAction(params: GenerateFeedbackParams) {
         const generateWithRetry = async (retries = 3, delay = 1000) => {
             try {
                 return await generateObject({
-                    model: google("gemini-2.5-flash"), // Fallback to standard 1.0 Pro
+                    model: google(DEFAULT_AI_MODEL), // Fallback to standard 1.0 Pro
                     schema: feedbackSchema,
                     prompt: `
             You are an AI interviewer analyzing a mock interview. Your task is to evaluate the candidate based on structured categories. Be thorough and detailed in your analysis. Don't be lenient with the candidate. If there are mistakes or areas for improvement, point them out.

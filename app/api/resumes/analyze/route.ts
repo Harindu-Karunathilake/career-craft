@@ -1,3 +1,4 @@
+import { DEFAULT_AI_MODEL } from '@/constants/ai';
 import { NextRequest, NextResponse } from "next/server";
 import { google } from "@ai-sdk/google";
 import { generateText } from "ai";
@@ -81,7 +82,7 @@ IMPORTANT:
         const runWithRetry = async (retries = 3, delay = 1000): Promise<string> => {
             try {
                 const { text } = await generateText({
-                    model: google("gemini-2.5-flash"),
+                    model: google(DEFAULT_AI_MODEL),
                     prompt,
                 });
                 return text;

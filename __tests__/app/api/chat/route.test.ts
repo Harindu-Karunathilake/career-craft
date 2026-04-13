@@ -3,7 +3,6 @@
  */
 import { POST } from '@/app/api/chat/route'
 import { streamText } from 'ai'
-import { google } from '@ai-sdk/google'
 
 jest.mock('ai', () => ({
   streamText: jest.fn(),

@@ -13,7 +13,7 @@ import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/
 import { ScrollArea } from "@/components/ui/scroll-area"
 import Script from "next/script"
 import { toast } from "sonner"
-import { markLessonComplete as _markLessonComplete } from "@/lib/actions/gamification"
+// markLessonComplete is handled inline via Firestore writes in handleMarkComplete
 import Link from "next/link"
 
 declare global {
