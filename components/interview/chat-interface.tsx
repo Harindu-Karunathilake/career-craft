@@ -8,6 +8,26 @@ import { cn } from "@/lib/utils";
 import { firebaseAuth } from "@/lib/firebase";
 import { toast } from "sonner";
 
+// Lightweight markdown renderer for chat messages
+function renderMarkdown(text: string) {
+    const lines = text.split('\n');
+    return lines.map((line, i) => {
+        // Bold: **text**
+        const boldParsed = line.split(/\*\*(.*?)\*\*/g).map((part, j) =>
+            j % 2 === 1 ? <strong key={j} className="font-semibold text-white">{part}</strong> : part
+        );
+        // Bullet points
+        if (line.trim().startsWith('•') || line.trim().startsWith('-')) {
+            return <li key={i} className="ml-3 list-none flex gap-1.5"><span className="text-emerald-400 mt-0.5">›</span><span>{boldParsed}</span></li>;
+        }
+        // Empty line = spacer
+        if (line.trim() === '') {
+            return <div key={i} className="h-1" />;
+        }
+        return <p key={i} className="leading-snug">{boldParsed}</p>;
+    });
+}
+
 interface Message {
     role: 'user' | 'ai';
     content: string;
@@ -96,13 +116,13 @@ export default function ChatInterface({ sessionId, messages, currentCode, status
                     )}
                     
                     {messages.map((msg, i) => (
-                        <div key={i} className={cn("flex flex-col max-w-[85%]", msg.role === 'user' ? "self-end items-end" : "self-start items-start")}>
-                             <div className={cn("p-3 rounded-lg text-sm", 
-                                msg.role === 'user' ? "bg-indigo-600/20 text-indigo-100 rounded-br-none" : "bg-white/10 text-zinc-100 rounded-bl-none"
+                        <div key={i} className={cn("flex flex-col max-w-[90%]", msg.role === 'user' ? "self-end items-end" : "self-start items-start")}>
+                             <div className={cn("p-3 rounded-lg text-sm space-y-0.5", 
+                                msg.role === 'user' ? "bg-indigo-600/20 text-indigo-100 rounded-br-none" : "bg-white/5 border border-white/10 text-zinc-100 rounded-bl-none"
                              )}>
-                                 {msg.content}
+                                 {msg.role === 'ai' ? renderMarkdown(msg.content) : msg.content}
                              </div>
-                             <span className="text-[10px] text-white/30 mt-1 capitalize">{msg.role}</span>
+                             <span className="text-[10px] text-white/30 mt-1 capitalize">{msg.role === 'ai' ? 'AI Interviewer' : 'You'}</span>
                         </div>
                     ))}
                     <div ref={scrollRef} />
