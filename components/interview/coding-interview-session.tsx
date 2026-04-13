@@ -29,7 +29,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     const lkServerUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
     // AI Tutor State
-    const { isAIActive, isMuted, agentStatus } = useTutorStore();
+    const { isAIActive, isMuted } = useTutorStore();
     const { analyzeCode, isAnalyzing } = useCodeAnalysis();
     // Track previous code to avoid syncing unchanged content
     const lastSyncedCodeRef = useRef<string>("");
@@ -96,7 +96,8 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                 }).catch(e => console.error("Firebase log error", e));
             }
         }
-    }, [useTutorStore.getState().messages]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [sessionId, code]);
 
     // Auto-save logic
     useEffect(() => {

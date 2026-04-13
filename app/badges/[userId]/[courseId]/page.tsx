@@ -97,7 +97,7 @@ export async function generateMetadata({ params }: BadgePageProps): Promise<Meta
         description: `Verified Course Completion on Career Craft.`,
       }
     }
-  } catch (_) {
+  } catch (_error) {
     return { title: "Course Badge" }
   }
 }
