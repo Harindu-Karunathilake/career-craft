@@ -1,3 +1,4 @@
+import { DEFAULT_AI_MODEL } from '@/constants/ai';
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
@@ -87,7 +88,7 @@ export async function POST(req: Request) {
         `;
 
         const searchParamsResult = await generateObject({
-            model: google('gemini-2.5-flash'),
+            model: google(DEFAULT_AI_MODEL),
             prompt: searchPrompt,
             schema: SearchParamsSchema,
         });
@@ -257,7 +258,7 @@ export async function POST(req: Request) {
         `;
 
         const rankingResult = await generateObject({
-            model: google('gemini-2.5-flash'),
+            model: google(DEFAULT_AI_MODEL),
             prompt: rankingPrompt,
             schema: RankingResponseSchema,
         });

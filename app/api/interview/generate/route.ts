@@ -1,3 +1,4 @@
+import { DEFAULT_AI_MODEL } from '@/constants/ai';
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
@@ -53,7 +54,7 @@ export async function POST(req: Request) {
         const generateWithRetry = async (retries = 3, delay = 1000) => {
             try {
                 return await generateObject({
-                    model: google('gemini-2.5-flash'),
+                    model: google(DEFAULT_AI_MODEL),
                     schema: z.object({
                         questions: z.array(z.string()),
                     }),
