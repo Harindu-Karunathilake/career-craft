@@ -22,7 +22,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     const [messages, setMessages] = useState<any[]>(interviewData.messages || []);
     const [code, setCode] = useState(interviewData.code || "// Write your solution here\n");
     const [fallbackStartTime] = useState(() => Date.now());
-    const [lastTypingTime, setLastTypingTime] = useState(Date.now());
+    const [lastTypingTime, setLastTypingTime] = useState(() => Date.now());
     
     // LiveKit State
     const [lkToken, setLkToken] = useState("");
@@ -96,7 +96,6 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                 }).catch(e => console.error("Firebase log error", e));
             }
         }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionId, code]);
 
     // Auto-save logic
