@@ -1,3 +1,4 @@
+import { DEFAULT_AI_MODEL } from '@/constants/ai';
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
         const generateWithRetry = async (retries = 3, delay = 1000) => {
             try {
                 return await generateObject({
-                    model: google('gemini-2.5-flash'), // Fallback to standard 1.0 Pro
+                    model: google(DEFAULT_AI_MODEL), // Fallback to standard 1.0 Pro
                     schema: z.object({
                         isValid: z.boolean(),
                         message: z.string().describe("A helpful message explaining why the role is invalid or a confirmation if it is valid. If invalid, suggest 2-3 suitable IT roles."),

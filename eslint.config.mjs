@@ -15,6 +15,7 @@ const eslintConfig = defineConfig([
     "public/pdf.worker.min.mjs",
     "functions/lib/**",
     "functions/node_modules/**",
+    "scratch/**",
   ]),
   {
     rules: {
