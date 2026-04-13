@@ -5,8 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Play, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { httpsCallable } from "firebase/functions";
-import { firebaseFunctions } from "@/lib/firebase"; // Ensure this exports 'functions' instance
+import { firebaseAuth } from "@/lib/firebase";
 import { toast } from "sonner";
 
 interface Message {
@@ -37,27 +36,34 @@ export default function ChatInterface({ sessionId, messages, currentCode, status
         toast.info("Submitting code for evaluation...");
         
         try {
-            // Check if functions are initialized in lib/firebase. If not, we might fail.
-            // Assuming firebaseFunctions is exported. If not, I'll need to fix lib/firebase.ts
-            // For now, let's assume standard names.
-            
-            const submitCodeFn = httpsCallable(firebaseFunctions, 'submitCode');
-            const result = await submitCodeFn({
-                sessionId,
-                code: currentCode,
-                language: 'javascript' 
+            const userId = firebaseAuth.currentUser?.uid;
+            if (!userId) {
+                toast.error("You must be logged in to submit.");
+                return;
+            }
+
+            const response = await fetch('/api/submit-code', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    sessionId,
+                    code: currentCode,
+                    language: 'javascript',
+                    userId,
+                }),
             });
-            
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.error || 'Evaluation failed');
+            }
+
             console.log("Submission result:", result);
             toast.success("Feedback received!");
-        } catch (error) {
+        } catch (error: any) {
             console.error("Submission error:", error);
-            
-            // Fallback for demo if functions aren't running locally or deployed
-            toast.error("Cloud Function failed. (Did you deploy?). Showing mock response.");
-            
-            // We can't update Firestore directly easily without duplicating logic.
-            // Just let the user know.
+            toast.error(error.message || "Failed to evaluate code. Please try again.");
         } finally {
             setLoading(false);
         }

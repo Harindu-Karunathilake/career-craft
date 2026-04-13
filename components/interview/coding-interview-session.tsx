@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Mic, MicOff, Bot, Square } from "lucide-react";
 import CodeEditor from "./code-editor";
 import ChatInterface from "./chat-interface";
@@ -31,6 +31,8 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     // AI Tutor State
     const { isAIActive, isMuted, agentStatus } = useTutorStore();
     const { analyzeCode, isAnalyzing } = useCodeAnalysis();
+    // Track previous code to avoid syncing unchanged content
+    const lastSyncedCodeRef = useRef<string>("");
 
     useEffect(() => {
         const fetchLkToken = async () => {
@@ -114,7 +116,20 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
         return () => clearTimeout(saveTimeout);
     }, [code, sessionId]);
 
-    // AI Context Sync (Stuck User)
+    // Live code sync — debounced 3s after the user stops typing
+    useEffect(() => {
+        if (!isAIActive) return;
+        if (code === lastSyncedCodeRef.current) return; // No change, skip
+
+        const syncTimeout = setTimeout(() => {
+            const currentQuestion = interviewData?.questions?.[0] || "General programming";
+            syncCodeContextWithAI(code, currentQuestion);
+            lastSyncedCodeRef.current = code;
+        }, 3000); // 3 second debounce
+
+        return () => clearTimeout(syncTimeout);
+    }, [code, isAIActive, interviewData]);
+
     useEffect(() => {
         const interval = setInterval(async () => {
             const timeSinceLastTyping = Date.now() - lastTypingTime;
@@ -122,7 +137,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                 const currentQuestion = interviewData?.questions?.[0] || "General programming";
                 const hint = await analyzeCode(code, currentQuestion);
                 if (hint) {
-                    syncCodeContextWithAI(`User seems stuck. Code:\n${code}\nInsight: ${hint}`);
+                    syncCodeContextWithAI(code, currentQuestion);
                 }
             }
         }, 10000);
@@ -135,13 +150,13 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     };
 
     const handleAskAI = async () => {
+        const currentQuestion = interviewData?.questions?.[0] || "General programming";
         if (!isAIActive) {
-            startAITutor(code);
+            startAITutor(code, currentQuestion);
         } else {
-            const currentQuestion = interviewData?.questions?.[0] || "General programming";
             const hint = await analyzeCode(code, currentQuestion);
             if (hint) {
-                syncCodeContextWithAI(`User explicitly asked for help. Code:\n${code}\nInsight: ${hint}`);
+                syncCodeContextWithAI(code, currentQuestion);
             }
         }
     };

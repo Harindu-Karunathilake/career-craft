@@ -22,6 +22,8 @@ export const getVapiTutor = (): any | null => {
         vapiSingleton.on("call-end", () => {
              useTutorStore.getState().setAgentStatus('FINISHED');
              useTutorStore.getState().setAIActive(false);
+             // Reset singleton so next call starts fresh
+             vapiSingleton = null;
         });
         vapiSingleton.on("message", (message: any) => {
             if (message.type === "transcript" && message.transcriptType === "final") {
@@ -36,27 +38,39 @@ export const getVapiTutor = (): any | null => {
             console.error("VAPI Error:", error);
             useTutorStore.getState().setAgentStatus('ERROR');
             useTutorStore.getState().setAIActive(false);
+            // Reset singleton on error so future calls can create a fresh instance
+            vapiSingleton = null;
         });
     }
     return vapiSingleton;
 };
 
 // Start the AI Tutor in the current session
-export const startAITutor = async (customContext?: string) => {
+export const startAITutor = async (currentCode?: string, question?: string) => {
     const vapi = getVapiTutor();
     if (!vapi) return;
 
     useTutorStore.getState().setAgentStatus('CONNECTING');
     useTutorStore.getState().setAIActive(true);
 
-    const basePrompt = "You are a technical interviewer and tutor for a live coding session. Help the candidate think through problems instead of giving direct answers. Be concise (max 2-3 sentences), clear, and supportive. Wait for them to finish thinking.";
-    const systemPrompt = customContext ? `${basePrompt}\n\nContext:\n${customContext}` : basePrompt;
+    const questionContext = question
+        ? `\n\nThe candidate is currently working on this problem:\n"${question}"`
+        : "";
+    const codeContext = currentCode
+        ? `\n\nTheir current code is:\n${currentCode}`
+        : "";
+
+    const systemPrompt = `You are a technical interviewer and tutor for a live coding session.${questionContext}${codeContext}
+
+Your job is to help the candidate think through the problem without giving them direct solutions. Guide them with hints about their approach, edge cases, or complexity. Be concise (max 2-3 sentences per response), clear, and supportive. Always refer back to the specific problem they are solving when giving guidance.`;
 
     try {
         await vapi.start({
             ...interviewer,
             name: "Career Craft Tutor",
-            firstMessage: "Hi there! I'm your AI tutor. Let me know when you're ready to start coding or if you need any help.",
+            firstMessage: question
+                ? `Hi! I'm your AI tutor. I can see you're working on: "${question.substring(0, 80)}${question.length > 80 ? '...' : ''}". Let me know when you need a hint or guidance!`
+                : "Hi there! I'm your AI tutor. Let me know when you're ready to start coding or if you need any help.",
             model: {
                 ...interviewer.model,
                 messages: [
@@ -74,17 +88,17 @@ export const startAITutor = async (customContext?: string) => {
     }
 };
 
-// Send current code to Vapi's context dynamically
-export const syncCodeContextWithAI = (code: string, language: string = 'javascript') => {
+// Send current code + question to Vapi's context dynamically
+export const syncCodeContextWithAI = (context: string, question?: string, language: string = 'javascript') => {
     const vapi = getVapiTutor();
     if (!vapi || useTutorStore.getState().agentStatus !== 'ACTIVE') return;
 
-    // We can inject a system message into the running Vapi session to provide context
+    const questionNote = question ? `The problem they are solving is:\n"${question}"\n\n` : '';
     vapi.send({
         type: "add-message",
         message: {
             role: "system",
-            content: `The candidate's current code in ${language} is:\n\n${code}`
+            content: `${questionNote}The candidate's current code in ${language} is:\n\n${context}`
         }
     });
 };

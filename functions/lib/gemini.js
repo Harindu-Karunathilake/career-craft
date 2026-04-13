@@ -8,6 +8,7 @@ const genAI = new generative_ai_1.GoogleGenerativeAI(apiKey);
 const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 async function generateFeedback(problemContext, userCode, executionResult) {
     console.log("Generating feedback with model:", model.model);
+    console.log("API Key present:", !!apiKey, "| Key prefix:", apiKey ? apiKey.substring(0, 8) + "..." : "NONE");
     if (!apiKey) {
         console.warn("GEMINI_API_KEY is not set. Returning mock feedback.");
         return {
@@ -57,12 +58,15 @@ async function generateFeedback(problemContext, userCode, executionResult) {
         return JSON.parse(cleanedText);
     }
     catch (error) {
-        console.error("Error calling Gemini:", error);
+        console.error("Error calling Gemini - Full error:", JSON.stringify(error, null, 2));
+        console.error("Error message:", error.message);
+        console.error("Error status:", error.status);
+        console.error("Error code:", error.code);
         return {
             totalScore: 0,
             categoryScores: [],
             strengths: [],
-            areasForImprovement: [`Error generating feedback: ${error.message || error}`],
+            areasForImprovement: [`Error: ${error.message || String(error)}`],
             finalAssessment: "An error occurred while generating feedback.",
             nextQuestion: "Please check backend logs."
         };
