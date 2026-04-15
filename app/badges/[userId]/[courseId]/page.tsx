@@ -86,15 +86,23 @@ export async function generateMetadata({ params }: BadgePageProps): Promise<Meta
       title: `${userName} completed ${badge.courseTitle}`,
       description: `Verify ${userName}'s achievement on Career Craft.`,
       openGraph: {
-        title: `${userName} earned a Course Badge!`,
-        description: `Successfully completed: ${badge.courseTitle}`,
-        images: [`/og-badge.png`], 
+        title: `🏆 ${userName} earned a Course Badge!`,
+        description: `✨ Successfully completed: ${badge.courseTitle}`,
+        images: [
+          {
+            url: `/api/badges/og?userId=${userId}&courseId=${courseId}`,
+            width: 1200,
+            height: 630,
+            alt: `Certificate of Completion for ${userName}`,
+          }
+        ],
         type: 'website',
       },
       twitter: {
         card: "summary_large_image",
-        title: `${userName} completed ${badge.courseTitle}`,
-        description: `Verified Course Completion on Career Craft.`,
+        title: `🏆 ${userName} earned a Course Badge!`,
+        description: `✨ Successfully completed: ${badge.courseTitle}`,
+        images: [`/api/badges/og?userId=${userId}&courseId=${courseId}`],
       }
     }
   } catch {
