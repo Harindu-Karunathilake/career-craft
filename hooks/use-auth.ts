@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { onAuthStateChanged, type User } from "firebase/auth"
+import { doc, onSnapshot } from "firebase/firestore"
 
 import { firebaseAuth, firebaseDb } from "@/lib/firebase"
 
@@ -11,30 +12,45 @@ export function useAuth() {
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        const unsubscribe = onAuthStateChanged(firebaseAuth, async (user) => {
+        // Holds the Firestore profile snapshot unsubscribe function.
+        // Must be cleaned up whenever the auth user changes or the component unmounts,
+        // otherwise the listener keeps firing after sign-out → permission-denied errors.
+        let profileUnsub: (() => void) | null = null
+
+        const authUnsub = onAuthStateChanged(firebaseAuth, (user) => {
+            // Always tear down the previous Firestore listener first.
+            if (profileUnsub) {
+                profileUnsub()
+                profileUnsub = null
+            }
+
             setUser(user)
+
             if (user) {
-                // Subscribe to user profile in Firestore
-                const { doc, onSnapshot } = await import("firebase/firestore")
-                onSnapshot(doc(firebaseDb, "users", user.uid), (doc) => {
-                    if (doc.exists()) {
-                        setProfile(doc.data())
-                    } else {
-                        setProfile(null)
+                profileUnsub = onSnapshot(
+                    doc(firebaseDb, "users", user.uid),
+                    (snap) => {
+                        setProfile(snap.exists() ? snap.data() : null)
+                        setLoading(false)
+                    },
+                    (err) => {
+                        // Suppress permission-denied that can occur during sign-out race.
+                        if (err.code !== "permission-denied") {
+                            console.error("[useAuth] profile snapshot error:", err)
+                        }
+                        setLoading(false)
                     }
-                    setLoading(false)
-                })
-                // Clean up the snapshot listener when the user changes or component unmounts
-                // However, onAuthStateChanged cleanup is tricky with nested listeners. 
-                // Since this is a top-level hook, it's generally okay. 
-                // A more robust solution would be managing the subscription in a separate effect dependent on `user`.
+                )
             } else {
                 setProfile(null)
                 setLoading(false)
             }
         })
 
-        return () => unsubscribe()
+        return () => {
+            authUnsub()
+            if (profileUnsub) profileUnsub()
+        }
     }, [])
 
     return { user, profile, loading }
