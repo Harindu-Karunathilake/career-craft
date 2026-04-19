@@ -3,6 +3,7 @@ import { PublishedCoursesList } from "@/components/dashboard/published-courses";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { JobsList } from "@/components/dashboard/jobs-list";
 import { RecommendedJobs } from "@/components/dashboard/recommended-jobs";
+import { PeopleTab } from "@/components/dashboard/people-tab";
 
 export default function TutorCommunityPage() {
     return (
@@ -10,7 +11,7 @@ export default function TutorCommunityPage() {
             <div>
                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/80">Community</p>
                 <h1 className="text-3xl font-bold tracking-tight">Explore</h1>
-                <p className="text-muted-foreground mt-1">Discover interviews and courses shared by the community.</p>
+                <p className="text-muted-foreground mt-1">Discover interviews, courses, jobs, and people.</p>
             </div>
 
             <Tabs defaultValue="courses" className="space-y-6">
@@ -29,9 +30,15 @@ export default function TutorCommunityPage() {
                     </TabsTrigger>
                     <TabsTrigger 
                         value="jobs" 
-                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent px-0 pb-3 pt-2 font-medium text-muted-foreground data-[state=active]:text-blue-400 hover:text-white transition-colors"
+                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-blue-500 data-[state=active]:bg-transparent px-0 pb-3 pt-2 mr-6 font-medium text-muted-foreground data-[state=active]:text-blue-400 hover:text-white transition-colors"
                     >
                         Jobs
+                    </TabsTrigger>
+                    <TabsTrigger
+                        value="people"
+                        className="rounded-none border-b-2 border-transparent data-[state=active]:border-violet-500 data-[state=active]:bg-transparent px-0 pb-3 pt-2 font-medium text-muted-foreground data-[state=active]:text-violet-400 hover:text-white transition-colors"
+                    >
+                        People
                     </TabsTrigger>
                 </TabsList>
                 
@@ -46,6 +53,10 @@ export default function TutorCommunityPage() {
                 <TabsContent value="jobs" className="animate-in slide-in-from-right-4 duration-300">
                     <RecommendedJobs />
                     <JobsList />
+                </TabsContent>
+
+                <TabsContent value="people" className="animate-in slide-in-from-right-4 duration-300">
+                    <PeopleTab />
                 </TabsContent>
             </Tabs>
         </div>
