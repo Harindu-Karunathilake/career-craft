@@ -141,7 +141,7 @@ export function NotificationBell() {
             {totalCount === 0 ? (
               <div className="flex flex-col items-center justify-center py-10 gap-2">
                 <Bell className="h-8 w-8 text-white/20" />
-                <p className="text-sm text-white/40">You're all caught up!</p>
+                <p className="text-sm text-white/40">You&apos;re all caught up!</p>
               </div>
             ) : (
               <>

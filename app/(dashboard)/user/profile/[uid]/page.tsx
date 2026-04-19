@@ -14,7 +14,6 @@ import {
   getUserProfile,
   getRelationshipStatus,
   sendFriendRequest,
-  getChatId,
 } from "@/lib/actions/social"
 import { collection, getDocs } from "firebase/firestore"
 import type { PublicUserProfile } from "@/types"
@@ -83,7 +82,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ uid: s
       try {
         const snap2 = await getDocs(collection(firebaseDb, "users", uid, "badges"))
         setBadges(snap2.docs.map((d) => d.data() as Badge))
-      } catch (_) {
+      } catch {
         // badges might be private — fail gracefully
       }
 
