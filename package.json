@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "emulators": "firebase emulators:start",
+    "deploy:rules": "node node_modules/firebase-tools/lib/bin/firebase.js deploy --only firestore:rules",
     "test": "jest",
     "test:watch": "jest --watch"
   },
@@ -75,6 +76,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "^16.2.1",
+    "firebase-tools": "^15.15.0",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
     "tailwindcss": "^4",

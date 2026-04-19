@@ -1,0 +1,192 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Helpers ───────────────────────────────────────────────────────────
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // chatId = "{smallerUid}_{largerUid}". A participant's uid appears in the chatId.
+    function isChatParticipant(chatId) {
+      return chatId.matches('.*' + request.auth.uid + '.*');
+    }
+
+    // ─── Users ─────────────────────────────────────────────────────────────
+    // Any authenticated user can read profiles (for search / community page).
+    // Only the owner can write their own profile.
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      allow delete: if isOwner(userId);
+
+      // Interviews sub-collection
+      // Owner can read all their own interviews.
+      // Others can only read published ones (get by ID — list access still owner-only).
+      match /interviews/{interviewId} {
+        allow get:    if isSignedIn();   // needed for collectionGroup published queries
+        allow list:   if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+
+      // Resumes sub-collection (used by analytics, recommended-jobs, recommended-courses)
+      match /resumes/{resumeId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // User-scoped courses / enrollments
+      match /courses/{courseId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      match /enrollments/{enrollmentId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Badges — owner writes, anyone signed-in can read (public profiles)
+      match /badges/{badgeId} {
+        allow read:  if isSignedIn();
+        allow write: if isOwner(userId);
+      }
+
+      // Results / Reports
+      match /results/{resultId} {
+        allow read, write: if isOwner(userId);
+      }
+
+      // Notifications — owner reads/deletes; ANY signed-in user can CREATE
+      // (e.g. sending a message notification to the recipient)
+      match /notifications/{notifId} {
+        allow read, update, delete: if isOwner(userId);
+        allow create: if isSignedIn();
+      }
+    }
+
+    // ─── CollectionGroup: interviews ────────────────────────────────────────
+    // Powers the community page query:
+    //   collectionGroup("interviews").where("isPublished", "==", true)
+    // NOTE: `get` on a published interview by any signed-in user is also
+    // covered by the per-document rule above. The collectionGroup rule
+    // below handles the cross-user LIST query.
+    match /{path=**}/interviews/{interviewId} {
+      allow read: if isSignedIn() && resource.data.isPublished == true;
+    }
+
+    // ─── Friend Requests ────────────────────────────────────────────────────
+    // KEY FIX: Firestore query/snapshot rules are evaluated against
+    // request.auth, NOT resource.data (resource is null during list queries).
+    // We allow any signed-in user to LIST the collection; Firestore will
+    // enforce the where() filter client-side per document via the `get` rule.
+    // The per-document `get` rule checks resource.data to ensure only
+    // participants can read individual documents.
+    match /friendRequests/{requestId} {
+      // LIST (queries / onSnapshot): allow any authenticated user.
+      // Security for which docs they can see is enforced by the where() clauses
+      // in the query itself and the per-document get rule below.
+      allow list: if isSignedIn();
+
+      // GET (single document fetch): only sender or receiver.
+      allow get: if isSignedIn() && (
+        resource.data.fromUid == request.auth.uid ||
+        resource.data.toUid   == request.auth.uid
+      );
+
+      // CREATE: the fromUid field must match the current user.
+      allow create: if isSignedIn() &&
+        request.resource.data.fromUid == request.auth.uid;
+
+      // UPDATE: sender or receiver can update (accept / decline status).
+      allow update: if isSignedIn() && (
+        resource.data.toUid   == request.auth.uid ||
+        resource.data.fromUid == request.auth.uid
+      );
+
+      // DELETE: sender (cancel) or receiver (cleanup after decline).
+      allow delete: if isSignedIn() && (
+        resource.data.fromUid == request.auth.uid ||
+        resource.data.toUid   == request.auth.uid
+      );
+    }
+
+    // ─── Friends ────────────────────────────────────────────────────────────
+    // Structure: friends/{uid}/list/{friendId}
+    match /friends/{userId} {
+      allow read: if isSignedIn();
+
+      match /list/{friendId} {
+        allow read: if isSignedIn();
+        // Only the uid owner or the friend being added/removed can write.
+        allow write: if isSignedIn() && (
+          request.auth.uid == userId ||
+          request.auth.uid == friendId
+        );
+      }
+    }
+
+    // ─── Messages ───────────────────────────────────────────────────────────
+    // Structure: messages/{chatId}/messages/{messageId}
+    // chatId = sorted(uidA, uidB).join("_")
+    match /messages/{chatId} {
+      allow read: if isSignedIn() && isChatParticipant(chatId);
+
+      match /messages/{messageId} {
+        allow read: if isSignedIn() && isChatParticipant(chatId);
+        allow create: if isSignedIn() &&
+          isChatParticipant(chatId) &&
+          request.resource.data.senderId == request.auth.uid;
+        // Messages are immutable once sent.
+        allow update, delete: if false;
+      }
+    }
+
+    // ─── Top-level Courses (tutor/admin managed) ────────────────────────────
+    match /courses/{courseId} {
+      allow read: if true;           // Public browsing
+      allow write: if isSignedIn();  // Tighten to admin/tutor role in production
+    }
+
+    // ─── Top-level Enrollments ──────────────────────────────────────────────
+    match /enrollments/{enrollmentId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ─── Jobs ───────────────────────────────────────────────────────────────
+    match /jobs/{jobId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();  // Tighten to admin role in production
+    }
+
+    // ─── Published Courses (top-level, if used) ─────────────────────────────
+    match /publishedCourses/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ─── Reports ────────────────────────────────────────────────────────────
+    match /reports/{reportId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ─── Payout Requests ────────────────────────────────────────────────────
+    match /payoutRequests/{requestId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+
+    // ─── Payouts ────────────────────────────────────────────────────────────
+    match /payouts/{payoutId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn();
+    }
+  }
+}

@@ -9,6 +9,7 @@ import { User } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { firebaseAuth } from "@/lib/firebase"
+import { NotificationBell } from "@/components/dashboard/notification-bell"
 
 export function DashboardHeaderActions() {
   const router = useRouter()
@@ -50,6 +51,9 @@ export function DashboardHeaderActions() {
       <Button size="sm" variant="secondary" onClick={handleSignOut} disabled={isSigningOut}>
         {isSigningOut ? "Signing out..." : "Log out"}
       </Button>
+
+      {/* Notification Bell */}
+      <NotificationBell />
 
       {/* Avatar → Profile */}
       <Link
