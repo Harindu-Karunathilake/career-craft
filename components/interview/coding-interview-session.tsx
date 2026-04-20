@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Loader2, Mic, MicOff, Bot, Square } from "lucide-react";
+import { useEffect, useRef, useState, useCallback } from "react";
+import { Loader2, Mic, MicOff, Bot, Square, AlertTriangle } from "lucide-react";
 import CodeEditor from "./code-editor";
 import ChatInterface from "./chat-interface";
 import Timer from "./timer";
@@ -24,6 +24,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(interviewData.currentQuestionIndex || 0);
     const [fallbackStartTime] = useState(() => Date.now());
     const [lastTypingTime, setLastTypingTime] = useState(() => Date.now());
+    const [showEndModal, setShowEndModal] = useState(false);
     // Track last processed message count to detect newly-added Next Problem messages
     const lastMessageCountRef = useRef<number>(interviewData.messages?.length || 0);
     
@@ -188,8 +189,6 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     };
 
     const handleEndInterview = async () => {
-        if (!confirm("Are you sure you want to end the interview early?")) return;
-
         try {
             const userId = firebaseAuth.currentUser?.uid;
             if (!userId) return;
@@ -206,12 +205,59 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
         }
     };
 
+    // ── End Interview Confirmation Modal ─────────────────────────────────────
+    const EndInterviewModal = showEndModal ? (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div
+                className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+                onClick={() => setShowEndModal(false)}
+            />
+
+            {/* Panel */}
+            <div className="relative z-10 w-full max-w-sm rounded-2xl border border-white/10 bg-[#1a1a2e]/95 backdrop-blur-2xl shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+                {/* Red accent bar */}
+                <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-red-600 via-red-400 to-red-600" />
+
+                <div className="p-6">
+                    {/* Icon */}
+                    <div className="flex items-center justify-center w-14 h-14 rounded-full bg-red-500/10 border border-red-500/20 mx-auto mb-4">
+                        <AlertTriangle className="h-7 w-7 text-red-400" />
+                    </div>
+
+                    {/* Title */}
+                    <h2 className="text-lg font-bold text-white text-center">End Interview?</h2>
+                    <p className="text-sm text-white/50 text-center mt-2 leading-relaxed">
+                        Are you sure you want to end the interview early? Your current progress will be saved and you'll be taken to your feedback report.
+                    </p>
+
+                    {/* Buttons */}
+                    <div className="flex gap-3 mt-6">
+                        <button
+                            onClick={() => setShowEndModal(false)}
+                            className="flex-1 py-2.5 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 text-white/70 hover:text-white text-sm font-medium transition-all"
+                        >
+                            Keep Going
+                        </button>
+                        <button
+                            onClick={() => { setShowEndModal(false); handleEndInterview(); }}
+                            className="flex-1 py-2.5 rounded-xl bg-red-500/20 hover:bg-red-500/30 border border-red-500/30 text-red-400 hover:text-red-300 text-sm font-semibold transition-all"
+                        >
+                            End Interview
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    ) : null;
+
     if (loading) {
        return <div className="flex bg-black h-screen items-center justify-center text-white"><Loader2 className="animate-spin" /></div>;
     }
 
     const InnerContent = (
         <div className="flex h-screen w-full bg-black flex-col md:flex-row overflow-hidden">
+            {EndInterviewModal}
             {/* Left: Code Editor */}
             <div className="hidden md:flex flex-1 flex-col border-r border-white/10 bg-[#1e1e1e]">
                  <div className="flex items-center justify-between px-4 py-2 border-b border-white/10 bg-[#252526]">
@@ -255,7 +301,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                     <div className="flex items-center gap-4">
                          <div className="text-xs text-white/40">Auto-saving...</div>
                          <button 
-                            onClick={handleEndInterview}
+                            onClick={() => setShowEndModal(true)}
                             className="text-xs bg-red-500/10 hover:bg-red-500/20 text-red-400 px-3 py-1 rounded border border-red-500/20 transition-colors"
                          >
                             End Interview
