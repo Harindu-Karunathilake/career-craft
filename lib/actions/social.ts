@@ -56,6 +56,80 @@ export async function searchUsers(
   return results
 }
 
+// ─── Friend Suggestion Engine ─────────────────────────────────────────────────
+
+export interface SuggestedUser extends PublicUserProfile {
+  mutualCount: number
+  reason: string
+  score: number
+}
+
+export async function getSuggestedFriends(
+  currentUid: string,
+  maxResults = 10
+): Promise<SuggestedUser[]> {
+  const meSnap = await getDoc(doc(firebaseDb, "users", currentUid))
+  const meData = meSnap.exists() ? meSnap.data() : {}
+  const myTier = (meData.tier     ?? "") as string
+  const myXp   = (meData.careerXp ?? 0)  as number
+
+  const friendsSnap = await getDocs(collection(firebaseDb, "friends", currentUid, "list"))
+  const myFriendUids = new Set<string>(friendsSnap.docs.map((d) => d.id))
+
+  const [sentSnap, receivedSnap] = await Promise.all([
+    getDocs(query(collection(firebaseDb, "friendRequests"), where("fromUid", "==", currentUid), where("status", "==", "pending"))),
+    getDocs(query(collection(firebaseDb, "friendRequests"), where("toUid",   "==", currentUid), where("status", "==", "pending"))),
+  ])
+  const pendingUids = new Set<string>([
+    ...sentSnap.docs.map((d) => d.data().toUid as string),
+    ...receivedSnap.docs.map((d) => d.data().fromUid as string),
+  ])
+
+  const mutualCounts: Record<string, number> = {}
+  await Promise.all(
+    Array.from(myFriendUids).map(async (friendUid) => {
+      const snap = await getDocs(collection(firebaseDb, "friends", friendUid, "list"))
+      snap.docs.forEach((d) => {
+        const uid = d.id
+        if (uid !== currentUid && !myFriendUids.has(uid) && !pendingUids.has(uid)) {
+          mutualCounts[uid] = (mutualCounts[uid] ?? 0) + 1
+        }
+      })
+    })
+  )
+
+  const allUsersSnap = await getDocs(query(collection(firebaseDb, "users"), limit(100)))
+  const candidates: SuggestedUser[] = []
+
+  allUsersSnap.docs.forEach((d) => {
+    const uid = d.id
+    if (uid === currentUid || myFriendUids.has(uid) || pendingUids.has(uid)) return
+    const data      = d.data()
+    const theirTier = (data.tier     ?? "") as string
+    const theirXp   = (data.careerXp ?? 0)  as number
+    const mutual    = mutualCounts[uid] ?? 0
+    let score       = mutual * 3
+    const reasons: string[] = []
+    if (mutual > 0) reasons.push(`${mutual} mutual friend${mutual > 1 ? "s" : ""}`)
+    if (myTier && theirTier && myTier === theirTier) { score += 2; reasons.push("Same tier") }
+    if (myXp > 0 && Math.abs(myXp - theirXp) <= 200) { score += 1; reasons.push("Similar XP") }
+    if (score < 1) return
+    candidates.push({
+      uid,
+      displayName: data.name || data.displayName || "Unknown",
+      photoURL:    data.photoURL || "",
+      tier:        theirTier || undefined,
+      careerXp:    theirXp   || undefined,
+      mutualCount: mutual,
+      reason:      reasons.join(" · ") || "Suggested for you",
+      score,
+    })
+  })
+
+  candidates.sort((a, b) => b.score !== a.score ? b.score - a.score : a.displayName.localeCompare(b.displayName))
+  return candidates.slice(0, maxResults)
+}
+
 export async function getAllUsers(currentUid: string): Promise<PublicUserProfile[]> {
   const usersRef = collection(firebaseDb, "users")
   const q = query(usersRef, limit(50))

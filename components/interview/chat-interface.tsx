@@ -2,7 +2,6 @@
 
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Loader2, Play, Bot } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { firebaseAuth } from "@/lib/firebase";
@@ -43,12 +42,17 @@ interface ChatInterfaceProps {
 
 export default function ChatInterface({ sessionId, messages, currentCode, status }: ChatInterfaceProps) {
     const [loading, setLoading] = useState(false);
-    const scrollRef = useRef<HTMLDivElement>(null);
+    // Ref on the ScrollArea's inner viewport (the actual overflow-y container)
+    const viewportRef = useRef<HTMLDivElement>(null);
 
+    // Scroll to bottom of the chat panel only — never touches window scroll
     useEffect(() => {
-        if (scrollRef.current) {
-            scrollRef.current.scrollIntoView({ behavior: "smooth" });
-        }
+        const el = viewportRef.current;
+        if (!el) return;
+        // requestAnimationFrame ensures the new message has painted before we measure
+        requestAnimationFrame(() => {
+            el.scrollTop = el.scrollHeight;
+        });
     }, [messages]);
 
     const handleSubmitCode = async () => {
@@ -107,27 +111,25 @@ export default function ChatInterface({ sessionId, messages, currentCode, status
                 </Button>
             </div>
 
-            <ScrollArea className="flex-1 p-4">
-                <div className="flex flex-col gap-4">
-                    {messages.length === 0 && (
-                        <div className="text-center text-white/40 mt-10">
-                            No messages yet. The interviewer will review your code when you submit.
-                        </div>
-                    )}
-                    
-                    {messages.map((msg, i) => (
-                        <div key={i} className={cn("flex flex-col max-w-[90%]", msg.role === 'user' ? "self-end items-end" : "self-start items-start")}>
-                             <div className={cn("p-3 rounded-lg text-sm space-y-0.5", 
-                                msg.role === 'user' ? "bg-indigo-600/20 text-indigo-100 rounded-br-none" : "bg-white/5 border border-white/10 text-zinc-100 rounded-bl-none"
-                             )}>
-                                 {msg.role === 'ai' ? renderMarkdown(msg.content) : msg.content}
-                             </div>
-                             <span className="text-[10px] text-white/30 mt-1 capitalize">{msg.role === 'ai' ? 'AI Interviewer' : 'You'}</span>
-                        </div>
-                    ))}
-                    <div ref={scrollRef} />
-                </div>
-            </ScrollArea>
+            {/* Plain overflow div — direct ref access for scrollTop, no page scroll bleed */}
+            <div ref={viewportRef} className="flex-1 overflow-y-auto p-4 flex flex-col gap-4">
+                {messages.length === 0 && (
+                    <div className="text-center text-white/40 mt-10">
+                        No messages yet. The interviewer will review your code when you submit.
+                    </div>
+                )}
+                
+                {messages.map((msg, i) => (
+                    <div key={i} className={cn("flex flex-col max-w-[90%]", msg.role === 'user' ? "self-end items-end" : "self-start items-start")}>
+                         <div className={cn("p-3 rounded-lg text-sm space-y-0.5", 
+                            msg.role === 'user' ? "bg-indigo-600/20 text-indigo-100 rounded-br-none" : "bg-white/5 border border-white/10 text-zinc-100 rounded-bl-none"
+                         )}>
+                             {msg.role === 'ai' ? renderMarkdown(msg.content) : msg.content}
+                         </div>
+                         <span className="text-[10px] text-white/30 mt-1 capitalize">{msg.role === 'ai' ? 'AI Interviewer' : 'You'}</span>
+                    </div>
+                ))}
+            </div>
 
             {/* Optional text input if we want to allow asking questions */}
             {/* 

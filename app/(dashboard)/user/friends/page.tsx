@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Users, UserPlus, Search, MessageCircle, UserCheck, X, Clock, Trash2, ExternalLink, AlertCircle } from "lucide-react"
+import { Users, UserPlus, Search, MessageCircle, UserCheck, X, Clock, Trash2, ExternalLink, AlertCircle, Sparkles } from "lucide-react"
 
 import { useDashBase } from "@/hooks/use-dash-base"
 
@@ -11,6 +11,7 @@ import { firebaseAuth, firebaseDb } from "@/lib/firebase"
 import { doc, getDoc } from "firebase/firestore"
 import {
   searchUsers,
+  getSuggestedFriends,
   sendFriendRequest,
   acceptFriendRequest,
   declineFriendRequest,
@@ -22,6 +23,7 @@ import {
   getRelationshipStatus,
 } from "@/lib/actions/social"
 import type { Friend, FriendRequest, PublicUserProfile } from "@/types"
+import type { SuggestedUser } from "@/lib/actions/social"
 
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 function UserAvatar({ photo, name, px = 44 }: { photo?: string; name?: string; px?: number }) {
@@ -107,6 +109,75 @@ function AddFriendCard({
   )
 }
 
+// ─── Suggestion card ─────────────────────────────────────────────────────────
+function SuggestionCard({
+  user,
+  currentUser,
+  onSent,
+  dashBase,
+}: {
+  user: SuggestedUser
+  currentUser: { uid: string; displayName: string; photoURL: string }
+  onSent: () => void
+  dashBase: string
+}) {
+  const [sent, setSent] = useState(false)
+  const [sending, setSending] = useState(false)
+
+  const handleAdd = async () => {
+    setSending(true)
+    setSent(true)
+    try {
+      await sendFriendRequest(
+        { uid: currentUser.uid, displayName: currentUser.displayName, photoURL: currentUser.photoURL },
+        { uid: user.uid, displayName: user.displayName, photoURL: user.photoURL }
+      )
+      onSent()
+    } catch {
+      setSent(false)
+    } finally {
+      setSending(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/5 hover:bg-white/[0.08] hover:border-amber-400/20 p-4 transition-all">
+      <div className="flex items-center gap-3">
+        <UserAvatar photo={user.photoURL} name={user.displayName} px={40} />
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-white text-sm truncate">{user.displayName}</p>
+          {user.tier && <p className="text-[11px] text-white/40">{user.tier}</p>}
+        </div>
+        {user.mutualCount > 0 && (
+          <span className="flex-shrink-0 rounded-full bg-amber-400/10 border border-amber-400/20 px-2 py-0.5 text-[10px] font-bold text-amber-400">
+            {user.mutualCount} mutual
+          </span>
+        )}
+      </div>
+      <p className="text-[11px] text-white/40 leading-snug">{user.reason}</p>
+      <div className="flex gap-2">
+        <Link
+          href={`${dashBase}/profile/${user.uid}`}
+          className="flex items-center justify-center h-8 w-8 rounded-lg bg-white/10 hover:bg-white/20 text-white/50 hover:text-white transition-colors flex-shrink-0"
+          title="View Profile"
+        >
+          <ExternalLink className="h-3.5 w-3.5" />
+        </Link>
+        <button
+          onClick={handleAdd}
+          disabled={sent || sending}
+          className="flex-1 flex items-center justify-center gap-1.5 rounded-lg bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/20 px-3 py-1.5 text-xs font-semibold text-amber-400 transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+        >
+          {sent
+            ? <><UserCheck className="h-3.5 w-3.5" /> Sent</>
+            : <><UserPlus className="h-3.5 w-3.5" /> Add Friend</>
+          }
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Friend card — NO variant inheritance to avoid Framer Motion opacity bug ───
 function FriendCard({
   friend,
@@ -165,6 +236,8 @@ export default function FriendsPage() {
   const [incomingReqs, setIncomingReqs] = useState<FriendRequest[]>([])
   const [outgoingReqs, setOutgoingReqs] = useState<FriendRequest[]>([])
   const [searchResults, setSearchResults] = useState<PublicUserProfile[]>([])
+  const [suggestions, setSuggestions] = useState<SuggestedUser[]>([])
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false)
   const [searchQuery, setSearchQuery] = useState("")
   const [searching, setSearching] = useState(false)
   const [searchError, setSearchError] = useState<string | null>(null)
@@ -190,6 +263,17 @@ export default function FriendsPage() {
     else console.error("[Friends] getOutgoingRequests error:", outgoingResult.reason)
 
     setLoading(false)
+
+    // Load suggestions after the core data is ready
+    setSuggestionsLoading(true)
+    try {
+      const s = await getSuggestedFriends(uid, 8)
+      setSuggestions(s)
+    } catch (e) {
+      console.error("[Friends] getSuggestedFriends error:", e)
+    } finally {
+      setSuggestionsLoading(false)
+    }
   }, [])
 
   // ── Auth ─────────────────────────────────────────────────────────────────
@@ -407,6 +491,44 @@ export default function FriendsPage() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ── Suggested Friends ── */}
+      {(suggestionsLoading || suggestions.length > 0) && (
+        <div className="space-y-3">
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+            <Sparkles className="h-5 w-5 text-amber-400" />
+            People You May Know
+            {suggestions.length > 0 && (
+              <span className="ml-1 rounded-full bg-amber-400/20 px-2 py-0.5 text-xs font-bold text-amber-400">
+                {suggestions.length}
+              </span>
+            )}
+          </h2>
+
+          {suggestionsLoading ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {[...Array(3)].map((_, i) => (
+                <div key={i} className="h-24 rounded-xl bg-white/5 animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {suggestions.map((s) => (
+                <SuggestionCard
+                  key={s.uid}
+                  user={s}
+                  currentUser={currentUser!}
+                  onSent={() => {
+                    setSuggestions((prev) => prev.filter((x) => x.uid !== s.uid))
+                    if (currentUser) loadAll(currentUser.uid)
+                  }}
+                  dashBase={dashBase}
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
 
