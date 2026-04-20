@@ -39,3 +39,15 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Microsoft Office temp/lock files (created when a file is open)
+# Git cannot read these while Office has them locked
+~$*.docx
+~$*.xlsx
+~$*.pptx
+~$*.doc
+~$*.xls
+~$*.ppt
+
+# Scratch / one-off scripts (not part of the app)
+scratch/
