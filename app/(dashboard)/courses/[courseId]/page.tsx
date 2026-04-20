@@ -437,7 +437,7 @@ export default function CourseDetailsPage() {
                   size="lg"
                   className="mt-2 w-full sm:w-auto bg-indigo-600 hover:bg-indigo-500 text-white min-w-[200px]"
                   onClick={handlePurchase}
-                  disabled={purchasing || (!payhereReady && course.price > 0 && !isOwnCourse)}
+                  disabled={purchasing}
                 >
                   {purchasing ? (
                     <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processing…</>

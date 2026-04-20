@@ -5,7 +5,7 @@ const generative_ai_1 = require("@google/generative-ai");
 const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_API_KEY || "";
 console.log("DEBUG: Using API Key:", apiKey.substring(0, 10) + "...");
 const genAI = new generative_ai_1.GoogleGenerativeAI(apiKey);
-const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 async function generateFeedback(problemContext, userCode, executionResult) {
     console.log("Generating feedback with model:", model.model);
     console.log("API Key present:", !!apiKey, "| Key prefix:", apiKey ? apiKey.substring(0, 8) + "..." : "NONE");

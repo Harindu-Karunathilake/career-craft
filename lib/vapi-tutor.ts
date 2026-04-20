@@ -35,10 +35,23 @@ export const getVapiTutor = (): any | null => {
             }
         });
         vapiSingleton.on("error", (error: any) => {
-            console.error("VAPI Error:", error);
-            useTutorStore.getState().setAgentStatus('ERROR');
-            useTutorStore.getState().setAIActive(false);
-            // Reset singleton on error so future calls can create a fresh instance
+            // "ejected" means the Daily.co room ended normally (time limit, host left, etc.)
+            // Treat it as a graceful session end rather than a hard error.
+            const isEjected =
+                error?.error?.type === "ejected" ||
+                error?.error?.error?.type === "ejected" ||
+                error?.message?.type === "ejected";
+
+            if (isEjected) {
+                console.warn("VAPI session ended (ejected — room closed).");
+                useTutorStore.getState().setAgentStatus('FINISHED');
+                useTutorStore.getState().setAIActive(false);
+            } else {
+                console.error("VAPI Error:", error);
+                useTutorStore.getState().setAgentStatus('ERROR');
+                useTutorStore.getState().setAIActive(false);
+            }
+            // Always reset singleton so next call starts fresh
             vapiSingleton = null;
         });
     }
@@ -118,4 +131,57 @@ export const setAITutorMuted = (muted: boolean) => {
         vapi.setMuted(muted);
     }
     useTutorStore.getState().setMuted(muted);
+};
+
+/**
+ * Called after evaluation when there is a next problem.
+ *
+ * Two scenarios handled:
+ *  A) VAPI still ACTIVE  → inject context + inject assistant message into
+ *     conversation history + call vapi.say() so the agent reads it aloud.
+ *  B) VAPI FINISHED/ejected → auto-restart the session with the new question
+ *     so the user doesn't have to click "Ask AI Tutor" again manually.
+ */
+export const notifyNextProblem = async (nextQuestion: string, currentCode: string = '') => {
+    const status = useTutorStore.getState().agentStatus;
+
+    if (status === 'ACTIVE') {
+        const vapi = getVapiTutor();
+        if (!vapi) return;
+
+        // 1. Update system context so the agent knows the new problem
+        vapi.send({
+            type: "add-message",
+            message: {
+                role: "system",
+                content: `IMPORTANT: The previous problem has been evaluated. The user's NEW current problem is:\n\n"${nextQuestion}"\n\nYou already know this problem. When the user asks for help, refer specifically to this new problem — do not ask the user to share it.`
+            }
+        });
+
+        // 2. Inject as an assistant message into conversation history so
+        //    the agent "remembers" announcing it (prevents "share the problem" responses)
+        vapi.send({
+            type: "add-message",
+            message: {
+                role: "assistant",
+                content: `Great work on the previous problem! Your next challenge is: "${nextQuestion}". Let me know when you're ready to start or if you need a hint!`
+            }
+        });
+
+        // 3. Make the agent speak it aloud using the correct SDK method
+        try {
+            vapi.say(
+                `Excellent work! Here is your next challenge: ${nextQuestion}. Take a moment to think through your approach and let me know when you need guidance!`,
+                false // endCallAfterSpoken = false → keeps session alive
+            );
+        } catch {
+            // vapi.say() may not be available on older bundle versions — silently skip
+        }
+
+    } else if (status === 'FINISHED' || status === 'ERROR') {
+        // Session was ejected before/during evaluation — auto-restart with new question
+        // Small delay so Firestore state has fully settled
+        setTimeout(() => startAITutor(currentCode, nextQuestion), 800);
+    }
+    // CONNECTING state: do nothing — let it finish connecting first
 };

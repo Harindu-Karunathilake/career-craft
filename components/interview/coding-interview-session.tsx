@@ -8,7 +8,7 @@ import Timer from "./timer";
 import { doc, onSnapshot, updateDoc, collection, addDoc } from "firebase/firestore";
 import { firebaseDb, firebaseAuth } from "@/lib/firebase";
 import { useTutorStore } from "@/hooks/use-tutor-store";
-import { startAITutor, stopAITutor, setAITutorMuted, syncCodeContextWithAI } from "@/lib/vapi-tutor";
+import { startAITutor, stopAITutor, setAITutorMuted, syncCodeContextWithAI, notifyNextProblem } from "@/lib/vapi-tutor";
 import { useCodeAnalysis } from "@/hooks/use-code-analysis";
 import { LiveKitRoom, RoomAudioRenderer } from '@livekit/components-react';
 
@@ -21,8 +21,11 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     const [loading, setLoading] = useState(true);
     const [messages, setMessages] = useState<any[]>(interviewData.messages || []);
     const [code, setCode] = useState(interviewData.code || "// Write your solution here\n");
+    const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(interviewData.currentQuestionIndex || 0);
     const [fallbackStartTime] = useState(() => Date.now());
     const [lastTypingTime, setLastTypingTime] = useState(() => Date.now());
+    // Track last processed message count to detect newly-added Next Problem messages
+    const lastMessageCountRef = useRef<number>(interviewData.messages?.length || 0);
     
     // LiveKit State
     const [lkToken, setLkToken] = useState("");
@@ -57,22 +60,45 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
         const unsubscribe = onSnapshot(doc(firebaseDb, "users", userId, "interviews", sessionId), async (docSnap) => {
             if (docSnap.exists()) {
                 const data = docSnap.data();
+
+                // --- Bootstrap first question ---
                 if ((!data.messages || data.messages.length === 0) && data.questions && data.questions.length > 0) {
-                     const firstQuestion = data.questions[0];
-                     try {
-                         await updateDoc(doc(firebaseDb, "users", userId, "interviews", sessionId), {
-                             messages: [{
-                                 role: 'ai',
-                                 content: `Welcome! Here is your first problem:\n\n${firstQuestion}`,
-                                 timestamp: Date.now()
-                             }],
-                             currentQuestionIndex: 0
-                         });
-                     } catch (e) {
-                         console.error("Failed to inject first question", e);
-                     }
+                    const firstQuestion = data.questions[0];
+                    try {
+                        await updateDoc(doc(firebaseDb, "users", userId, "interviews", sessionId), {
+                            messages: [{
+                                role: 'ai',
+                                content: `Welcome! Here is your first problem:\n\n${firstQuestion}`,
+                                timestamp: Date.now()
+                            }],
+                            currentQuestionIndex: 0
+                        });
+                    } catch (e) {
+                        console.error("Failed to inject first question", e);
+                    }
                 } else if (data.messages) {
-                    setMessages(data.messages);
+                    const newMessages: any[] = data.messages;
+                    const newIdx: number = data.currentQuestionIndex ?? 0;
+
+                    // Detect a newly-arrived AI message that contains the next problem
+                    // and notify the live VAPI agent so it reads it aloud.
+                    if (newMessages.length > lastMessageCountRef.current) {
+                        const newAiMessages = newMessages.slice(lastMessageCountRef.current);
+                        for (const msg of newAiMessages) {
+                            if (msg.role === 'ai' && typeof msg.content === 'string') {
+                                const nextProblemMatch = msg.content.match(/\*\*Next Problem:\*\*\n([\s\S]+?)$/m);
+                                if (nextProblemMatch) {
+                                    const nextQuestion = nextProblemMatch[1].trim();
+                                    // Pass current code so auto-restart has full context
+                                    setTimeout(() => notifyNextProblem(nextQuestion, code), 1500);
+                                }
+                            }
+                        }
+                    }
+                    lastMessageCountRef.current = newMessages.length;
+
+                    setMessages(newMessages);
+                    setCurrentQuestionIndex(newIdx);
                 }
             }
             setLoading(false);
@@ -116,25 +142,25 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
         return () => clearTimeout(saveTimeout);
     }, [code, sessionId]);
 
-    // Live code sync — debounced 3s after the user stops typing
+    // Live code sync — debounced 3s, always uses the current active question
     useEffect(() => {
         if (!isAIActive) return;
-        if (code === lastSyncedCodeRef.current) return; // No change, skip
+        if (code === lastSyncedCodeRef.current) return;
 
+        const currentQuestion = interviewData?.questions?.[currentQuestionIndex] || "General programming";
         const syncTimeout = setTimeout(() => {
-            const currentQuestion = interviewData?.questions?.[0] || "General programming";
             syncCodeContextWithAI(code, currentQuestion);
             lastSyncedCodeRef.current = code;
-        }, 3000); // 3 second debounce
+        }, 3000);
 
         return () => clearTimeout(syncTimeout);
-    }, [code, isAIActive, interviewData]);
+    }, [code, isAIActive, interviewData, currentQuestionIndex]);
 
     useEffect(() => {
         const interval = setInterval(async () => {
             const timeSinceLastTyping = Date.now() - lastTypingTime;
-            if (isAIActive && timeSinceLastTyping > 30000) { // 30s
-                const currentQuestion = interviewData?.questions?.[0] || "General programming";
+            if (isAIActive && timeSinceLastTyping > 30000) {
+                const currentQuestion = interviewData?.questions?.[currentQuestionIndex] || "General programming";
                 const hint = await analyzeCode(code, currentQuestion);
                 if (hint) {
                     syncCodeContextWithAI(code, currentQuestion);
@@ -142,7 +168,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
             }
         }, 10000);
         return () => clearInterval(interval);
-    }, [isAIActive, lastTypingTime, code, analyzeCode, interviewData]);
+    }, [isAIActive, lastTypingTime, code, analyzeCode, interviewData, currentQuestionIndex]);
 
     const handleCodeChange = (newCode: string) => {
         setCode(newCode);
@@ -150,7 +176,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     };
 
     const handleAskAI = async () => {
-        const currentQuestion = interviewData?.questions?.[0] || "General programming";
+        const currentQuestion = interviewData?.questions?.[currentQuestionIndex] || "General programming";
         if (!isAIActive) {
             startAITutor(code, currentQuestion);
         } else {
