@@ -35,6 +35,11 @@ service cloud.firestore {
         allow create: if isOwner(userId);
         allow update: if isOwner(userId);
         allow delete: if isOwner(userId);
+
+        // Session logs written by the live coding interview session
+        match /session_logs/{logId} {
+          allow read, write: if isOwner(userId);
+        }
       }
 
       // Resumes sub-collection (used by analytics, recommended-jobs, recommended-courses)

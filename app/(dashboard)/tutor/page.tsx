@@ -55,14 +55,23 @@ export default function TutorDashboardPage() {
                     where("tutorId", "==", user.uid)
                 );
 
-                // Run course fetch + enrollment/revenue fetch in parallel
-                const [courseSnap, enrollSnap] = await Promise.all([
+                // Run course fetch + enrollment fetch in parallel.
+                // Enrollments can have status: "paid" | "free" | "completed"
+                // Revenue only counts "paid" (not free), but student count counts all active statuses.
+                const [courseSnap, paidEnrollSnap, freeEnrollSnap] = await Promise.all([
                     getDocs(q),
                     getDocs(
                         query(
                             collection(firebaseDb, "enrollments"),
                             where("tutorId", "==", user.uid),
                             where("status", "==", "paid")
+                        )
+                    ),
+                    getDocs(
+                        query(
+                            collection(firebaseDb, "enrollments"),
+                            where("tutorId", "==", user.uid),
+                            where("status", "in", ["free", "completed"])
                         )
                     ),
                 ]);
@@ -80,12 +89,13 @@ export default function TutorDashboardPage() {
                 data.sort((a, b) => (b.views ?? 0) - (a.views ?? 0));
                 setCourses(data);
 
-                // Revenue = sum of tutorShare (95%) from paid enrollments
-                const totalRevenue = enrollSnap.docs.reduce(
+                // Revenue = sum of tutorShare from PAID enrollments only
+                const totalRevenue = paidEnrollSnap.docs.reduce(
                     (s, d) => s + (d.data().tutorShare ?? 0),
                     0
                 );
-                const totalStudents = enrollSnap.docs.length;
+                // Students = everyone enrolled (paid + free + completed)
+                const totalStudents = paidEnrollSnap.docs.length + freeEnrollSnap.docs.length;
 
                 const totalViews = data.reduce((s, c) => s + (c.views ?? 0), 0);
                 const publishedCourses = data.filter((c) => c.published).length;
