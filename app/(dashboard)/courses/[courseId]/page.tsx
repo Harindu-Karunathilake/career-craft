@@ -39,8 +39,8 @@ export default function CourseDetailsPage() {
   const [isEnrolled, setIsEnrolled] = useState(false)
   const [isOwnCourse, setIsOwnCourse] = useState(false)
   const [purchasing, setPurchasing] = useState(false)
-  const [payhereReady, setPayhereReady] = useState(false)
   
+
   // Progression States
   const [completedLessons, setCompletedLessons] = useState<string[]>([])
   const [enrollmentId, setEnrollmentId] = useState<string | null>(null)
@@ -322,7 +322,6 @@ export default function CourseDetailsPage() {
       <Script
         src="https://www.payhere.lk/lib/payhere.js"
         strategy="afterInteractive"
-        onLoad={() => setPayhereReady(true)}
       />
 
       <div className="flex items-center gap-4 mb-4">

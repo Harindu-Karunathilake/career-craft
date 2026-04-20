@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Loader2, Mic, MicOff, Bot, Square, AlertTriangle } from "lucide-react";
 import CodeEditor from "./code-editor";
 import ChatInterface from "./chat-interface";
@@ -106,6 +106,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
         });
 
         return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [sessionId]);
 
     // Track AI messages from Zustand and store in Firebase Logs
@@ -228,7 +229,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                     {/* Title */}
                     <h2 className="text-lg font-bold text-white text-center">End Interview?</h2>
                     <p className="text-sm text-white/50 text-center mt-2 leading-relaxed">
-                        Are you sure you want to end the interview early? Your current progress will be saved and you'll be taken to your feedback report.
+                        Are you sure you want to end the interview early? Your current progress will be saved and you&apos;ll be taken to your feedback report.
                     </p>
 
                     {/* Buttons */}
