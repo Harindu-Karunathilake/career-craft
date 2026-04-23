@@ -369,7 +369,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                     
                     {/* Console Output Panel */}
                     {consoleOutput && (
-                        <div className="h-124 border-t border-white/10 bg-[#1e1e1e] flex flex-col">
+                        <div className="h-[500px] border-t border-white/10 bg-[#1e1e1e] flex flex-col">
                             <div className="flex items-center justify-between px-4 py-1.5 bg-black/20 border-b border-white/5">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Console Output</span>
                                 <button onClick={() => setConsoleOutput("")} className="text-[10px] text-white/20 hover:text-white transition-colors">Clear</button>
