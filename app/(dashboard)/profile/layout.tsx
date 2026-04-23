@@ -1,4 +1,11 @@
 import type { ReactNode } from "react"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "My Profile | Career Craft",
+  description: "View your earned badges, career XP, and professional achievements.",
+}
+
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { UserSidebar } from "@/components/dashboard/user-sidebar"
 import { DashboardHeaderActions } from "@/components/dashboard/dashboard-header-actions"

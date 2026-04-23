@@ -53,10 +53,15 @@ const getVapi = () => {
         });
         vapiSingleton.on("message", (message: any) => {
             console.log("GLOBAL VAPI: message received:", message.type, message.role);
-            if (message.type === "transcript" && message.transcriptType === "final") {
-                const newMessage = { role: message.role, content: message.transcript };
-                if (setMessagesGlobal) setMessagesGlobal((prev: any) => [...prev, newMessage]);
-                if (setLastMessageGlobal) setLastMessageGlobal(message.transcript);
+            if (message.type === "transcript") {
+                if (message.transcriptType === "final") {
+                    const newMessage = { role: message.role, content: message.transcript };
+                    if (setMessagesGlobal) setMessagesGlobal((prev: any) => [...prev, newMessage]);
+                    if (setLastMessageGlobal) setLastMessageGlobal(message.transcript);
+                } else if (message.transcriptType === "partial") {
+                    // Update the "Live" box even for partials so it feels responsive
+                    if (setLastMessageGlobal) setLastMessageGlobal(message.transcript);
+                }
             }
         });
         vapiSingleton.on("speech-start", () => {

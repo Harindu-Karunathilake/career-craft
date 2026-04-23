@@ -2,11 +2,8 @@ import { DEFAULT_AI_MODEL } from '@/constants/ai';
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
-import { getDocs, collection, query, where, doc, getDoc } from 'firebase/firestore';
-import { firebaseDb } from '@/lib/firebase';
-import { adminStorage } from '@/lib/firebase-admin';
-import { decryptBuffer } from '@/lib/encryption-server';
-import { extractTextFromBuffer } from '@/lib/pdf2text-server';
+import { adminDb } from '@/lib/firebase-admin';
+import { getResumeText, readRecsCache, writeRecsCache } from '@/lib/resume-cache';
 
 // Force dynamic to ensure we always get fresh data if needed, valid for API routes
 export const dynamic = 'force-dynamic';
@@ -42,49 +39,45 @@ export async function POST(req: Request) {
             return new Response(JSON.stringify({ error: 'Bad Request', details: 'Missing userId' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
         }
 
-        // 1. Fetch Resume Metadata to get Storage Path
-        const resumeDocRef = doc(firebaseDb, "users", userId, "resumes", resumeId);
-        const resumeSnap = await getDoc(resumeDocRef);
+        // 1. Fetch Resume Metadata (Admin SDK — no auth session needed server-side)
+        const resumeSnap = await adminDb()
+            .collection("users").doc(userId)
+            .collection("resumes").doc(resumeId)
+            .get();
 
-        if (!resumeSnap.exists()) {
+        if (!resumeSnap.exists) {
             return new Response(JSON.stringify({ error: 'Not Found', details: 'Resume document not found' }), { status: 404, headers: { 'Content-Type': 'application/json' } });
         }
 
-        const resumeData = resumeSnap.data();
-        const storagePath = resumeData.resumeUrl || resumeData.fileUrl || resumeData.storagePath; // Handle discrepancies
+        const resumeData = resumeSnap.data() as Record<string, any>;
+        const storagePath = resumeData.resumeUrl || resumeData.fileUrl || resumeData.storagePath;
 
         if (!storagePath) {
             return new Response(JSON.stringify({ error: 'Data Error', details: 'Resume file path missing in database' }), { status: 500, headers: { 'Content-Type': 'application/json' } });
         }
 
-        // 2. Download Encrypted File from Admin Storage
-        const bucketName = process.env.FIREBASE_STORAGE_BUCKET || "career-craft-ac840.firebasestorage.app";
-        const bucket = adminStorage().bucket(bucketName);
-        const file = bucket.file(storagePath);
-
-        // Check if file exists
-        const [exists] = await file.exists();
-        if (!exists) {
-            return new Response(JSON.stringify({ error: 'Not Found', details: `File not found in storage: ${storagePath}` }), { status: 404, headers: { 'Content-Type': 'application/json' } });
+        // 2. Check recommendations cache (instant return if < 24 h old)
+        const cached = await readRecsCache(userId, "courses", resumeId);
+        if (cached) {
+            return new Response(JSON.stringify({ recommendations: cached, fromCache: true }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
         }
 
-        const [fileBuffer] = await file.download();
+        // 3. Get resume text (cached after first extraction — skips PDF download/parse)
+        const resumeText = await getResumeText(userId, resumeId, storagePath);
 
-        // 3. Decrypt File
-        const decryptedBuffer = await decryptBuffer(fileBuffer);
+        // 5. Fetch available courses from Firestore (Admin SDK)
+        const snapshot = await adminDb()
+            .collection('courses')
+            .where('published', '==', true)
+            .get();
 
-        // 4. Extract Text
-        const resumeText = await extractTextFromBuffer(decryptedBuffer);
-
-        // 5. Fetch available courses from Firestore
-        const coursesRef = collection(firebaseDb, 'courses');
-        const q = query(coursesRef, where('published', '==', true));
-        const snapshot = await getDocs(q);
-
-        const availableCourses = snapshot.docs.map(doc => {
-            const data = doc.data();
+        const availableCourses = snapshot.docs.map(d => {
+            const data = d.data();
             return {
-                id: doc.id,
+                id: d.id,
                 title: data.title,
                 description: data.description,
                 sections: data.chapters?.map((c: any) => c.title).join(', ') || ''
@@ -135,6 +128,9 @@ export async function POST(req: Request) {
             prompt: prompt,
             schema: ResponseSchema,
         });
+
+        // Persist to cache (fire-and-forget) and return
+        writeRecsCache(userId, "courses", resumeId, result.object.recommendations).catch(() => {});
 
         return new Response(JSON.stringify(result.object), {
             status: 200,

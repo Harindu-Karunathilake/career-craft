@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { useState, useEffect } from "react"
 import { signOut } from "firebase/auth"
 import Image from "next/image"
@@ -13,6 +13,7 @@ import { NotificationBell } from "@/components/dashboard/notification-bell"
 
 export function DashboardHeaderActions() {
   const router = useRouter()
+  const pathname = usePathname()
   const [isSigningOut, setIsSigningOut] = useState(false)
   const [photoURL, setPhotoURL] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState<string | null>(null)
@@ -57,7 +58,7 @@ export function DashboardHeaderActions() {
 
       {/* Avatar → Profile */}
       <Link
-        href="/profile"
+        href={pathname?.startsWith("/tutor") ? "/tutor/profile" : "/profile"}
         title="My Profile"
         className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full ring-2 ring-white/20 hover:ring-primary transition-all overflow-hidden bg-white/10"
       >
