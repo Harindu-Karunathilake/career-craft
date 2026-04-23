@@ -79,8 +79,20 @@ export default function CourseDetailsPage() {
         <div className="lg:col-span-3 flex flex-col min-h-0 space-y-4 overflow-y-auto pr-2">
             {activeLesson ? (
                 <div className="space-y-4">
+                {activeLesson.videoUrl && (
                     <div className="aspect-video bg-black rounded-lg overflow-hidden relative group">
-{(() => {
+                        {(() => {
+                            const url = activeLesson.videoUrl || "";
+                            
+                            // Check if it's a direct video file (mp4, webm, ogg or Firebase Storage URL)
+                            const isDirectVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('firebasestorage.googleapis.com');
+                            
+                            if (isDirectVideo) {
+                                return (
+                                    <video src={url} controls className="w-full h-full object-contain" />
+                                );
+                            }
+
                             const getYouTubeEmbedUrl = (url: string) => {
                                 try {
                                     // Handle standard watch URLs (youtube.com/watch?v=ID)
@@ -103,7 +115,7 @@ export default function CourseDetailsPage() {
                                 }
                             };
 
-                            const embedUrl = getYouTubeEmbedUrl(activeLesson.videoUrl || "");
+                            const embedUrl = getYouTubeEmbedUrl(url);
 
                             return embedUrl ? (
                                 <iframe 
@@ -117,12 +129,11 @@ export default function CourseDetailsPage() {
                                 <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
                                     <MonitorPlay className="h-16 w-16 mb-4 opacity-50" />
                                     <p>Invalid Video URL</p>
-                                    <p className="text-xs mt-2 opacity-70 truncate max-w-xs">{activeLesson.videoUrl}</p>
                                 </div>
                             );
                         })()}
                     </div>
-                    
+                )}
                     <Card>
                         <CardHeader>
                             <CardTitle className="flex items-center justify-between">
@@ -130,8 +141,19 @@ export default function CourseDetailsPage() {
                                 {activeLesson.duration && <span className="text-sm font-normal text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> {activeLesson.duration} min</span>}
                             </CardTitle>
                         </CardHeader>
-                        <CardContent className="prose dark:prose-invert max-w-none text-sm">
-                            <p className="whitespace-pre-wrap">{activeLesson.content || activeLesson.description || "No content added yet."}</p>
+                        <CardContent className="prose dark:prose-invert max-w-none text-sm p-6 pt-0">
+                            {(() => {
+                                const content = activeLesson.content || activeLesson.description || "No content added yet.";
+                                // Basic check if it's HTML from TipTap
+                                const isHtml = /<[a-z][\s\S]*>/i.test(content);
+                                
+                                if (isHtml) {
+                                    return <div dangerouslySetInnerHTML={{ __html: content }} />;
+                                }
+                                
+                                // Fallback for old plain-text courses
+                                return <p className="whitespace-pre-wrap">{content}</p>;
+                            })()}
                         </CardContent>
                     </Card>
                 </div>

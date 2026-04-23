@@ -2,11 +2,8 @@ import { DEFAULT_AI_MODEL } from '@/constants/ai';
 import { google } from '@ai-sdk/google';
 import { generateObject } from 'ai';
 import { z } from 'zod';
-import { collection, query, limit, orderBy, getDocs } from 'firebase/firestore';
-import { firebaseDb } from '@/lib/firebase';
-import { adminStorage } from '@/lib/firebase-admin';
-import { decryptBuffer } from '@/lib/encryption-server';
-import { extractTextFromBuffer } from '@/lib/pdf2text-server';
+import { adminDb } from '@/lib/firebase-admin';
+import { getResumeText, readRecsCache, writeRecsCache } from '@/lib/resume-cache';
 
 // Force dynamic to ensure we always get fresh data
 export const dynamic = 'force-dynamic';
@@ -42,35 +39,38 @@ export async function POST(req: Request) {
             return new Response(JSON.stringify({ error: 'Bad Request', details: 'Missing userId' }), { status: 400 });
         }
 
-        // 1. Fetch Latest Resume
-        const resumesRef = collection(firebaseDb, "users", userId, "resumes");
-        const resumeQ = query(resumesRef, orderBy("createdAt", "desc"), limit(1));
-        const resumeSnapshot = await getDocs(resumeQ);
+        // 1. Fetch Latest Resume metadata
+        const resumeSnapshot = await adminDb()
+            .collection("users").doc(userId)
+            .collection("resumes")
+            .orderBy("createdAt", "desc")
+            .limit(1)
+            .get();
 
         if (resumeSnapshot.empty) {
             return new Response(JSON.stringify({ error: 'No Resume', details: 'Please upload a resume first.' }), { status: 400 });
         }
 
-        const resumeData = resumeSnapshot.docs[0].data();
+        const resumeDoc = resumeSnapshot.docs[0];
+        const resumeId = resumeDoc.id;
+        const resumeData = resumeDoc.data() as Record<string, any>;
         const storagePath = resumeData.resumeUrl || resumeData.fileUrl || resumeData.storagePath;
 
         if (!storagePath) {
             return new Response(JSON.stringify({ error: 'Data Error', details: 'Resume path missing' }), { status: 500 });
         }
 
-        // 2. Download & Process Resume
-        const bucketName = process.env.FIREBASE_STORAGE_BUCKET || "career-craft-ac840.firebasestorage.app";
-        const bucket = adminStorage().bucket(bucketName);
-        const file = bucket.file(storagePath);
-        const [exists] = await file.exists();
-
-        if (!exists) {
-            return new Response(JSON.stringify({ error: 'File Not Found', details: 'Resume file not found in storage' }), { status: 404 });
+        // 2. Check recommendations cache (returns instantly if results are < 24h old)
+        const cached = await readRecsCache(userId, "jobs", resumeId);
+        if (cached) {
+            return new Response(JSON.stringify({ recommendations: cached, fromCache: true }), {
+                status: 200,
+                headers: { 'Content-Type': 'application/json' },
+            });
         }
 
-        const [fileBuffer] = await file.download();
-        const decryptedBuffer = await decryptBuffer(fileBuffer);
-        const resumeText = await extractTextFromBuffer(decryptedBuffer);
+        // 3. Get resume text (cached after first extraction — skips PDF download/parse)
+        const resumeText = await getResumeText(userId, resumeId, storagePath);
 
         // 3. Generate Search Queries with AI
         const searchPrompt = `
@@ -280,6 +280,9 @@ export async function POST(req: Request) {
         }).filter(Boolean);
 
         console.log(`Sending ${finalRecommendations.length} recommendations to frontend.`);
+
+        // Persist to cache (fire-and-forget)
+        writeRecsCache(userId, "jobs", resumeId, finalRecommendations).catch(() => {});
 
         return new Response(JSON.stringify({ recommendations: finalRecommendations }), {
             status: 200,

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Loader2, Mic, MicOff, Bot, Square, AlertTriangle } from "lucide-react";
+import { Loader2, Mic, MicOff, Bot, Square, AlertTriangle, PlayCircle } from "lucide-react";
 import CodeEditor from "./code-editor";
 import ChatInterface from "./chat-interface";
 import Timer from "./timer";
@@ -25,6 +25,8 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     const [fallbackStartTime] = useState(() => Date.now());
     const [lastTypingTime, setLastTypingTime] = useState(() => Date.now());
     const [showEndModal, setShowEndModal] = useState(false);
+    const [consoleOutput, setConsoleOutput] = useState<string>("");
+    const [isRunning, setIsRunning] = useState(false);
     // Track last processed message count to detect newly-added Next Problem messages
     const lastMessageCountRef = useRef<number>(interviewData.messages?.length || 0);
     
@@ -33,7 +35,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     const lkServerUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
     // AI Tutor State
-    const { isAIActive, isMuted } = useTutorStore();
+    const { isAIActive, isMuted, partialTranscript, messages: storeMessages } = useTutorStore();
     const { analyzeCode, isAnalyzing } = useCodeAnalysis();
     // Track previous code to avoid syncing unchanged content
     const lastSyncedCodeRef = useRef<string>("");
@@ -206,6 +208,44 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
         }
     };
 
+    const handleRunCode = () => {
+        setIsRunning(true);
+        setConsoleOutput("");
+        
+        let output = "";
+        const originalLog = console.log;
+        const originalError = console.error;
+        const originalWarn = console.warn;
+
+        // Capture logs
+        console.log = (...args) => {
+            output += args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(" ") + "\n";
+        };
+        console.error = (...args) => {
+            output += "Error: " + args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(" ") + "\n";
+        };
+        console.warn = (...args) => {
+            output += "Warning: " + args.map(arg => typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)).join(" ") + "\n";
+        };
+
+        try {
+            // Use a Function constructor for slightly better isolation than eval
+            const execute = new Function(code);
+            execute();
+            if (output === "") output = "(No output - execution successful)";
+        } catch (err: any) {
+            output += `\nRuntime Error: ${err.message}`;
+        } finally {
+            // Restore originals
+            console.log = originalLog;
+            console.error = originalError;
+            console.warn = originalWarn;
+            
+            setConsoleOutput(output);
+            setIsRunning(false);
+        }
+    };
+
     // ── End Interview Confirmation Modal ─────────────────────────────────────
     const EndInterviewModal = showEndModal ? (
         <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
@@ -270,6 +310,15 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                     {/* AI Controls */}
                     <div className="flex items-center gap-2">
                         <button
+                            onClick={handleRunCode}
+                            disabled={isRunning}
+                            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 transition-colors"
+                        >
+                            {isRunning ? <Loader2 className="h-3 w-3 animate-spin" /> : <PlayCircle className="h-3.5 w-3.5" />}
+                            Run Code
+                        </button>
+
+                        <button
                             onClick={handleAskAI}
                             disabled={isAnalyzing}
                             className={`flex items-center gap-1 px-3 py-1.5 text-xs rounded transition-colors ${
@@ -309,12 +358,46 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                          </button>
                     </div>
                  </div>
-                 <div className="flex-1 overflow-hidden relative">
-                    <CodeEditor 
-                        initialCode={code} 
-                        sessionId={sessionId} 
-                        onChange={handleCodeChange} 
-                    />
+                 <div className="flex-1 overflow-hidden relative flex flex-col">
+                    <div className="flex-1 overflow-hidden">
+                        <CodeEditor 
+                            initialCode={code} 
+                            sessionId={sessionId} 
+                            onChange={handleCodeChange} 
+                        />
+                    </div>
+                    
+                    {/* Console Output Panel */}
+                    {consoleOutput && (
+                        <div className="h-[500px] border-t border-white/10 bg-[#1e1e1e] flex flex-col">
+                            <div className="flex items-center justify-between px-4 py-1.5 bg-black/20 border-b border-white/5">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-white/40">Console Output</span>
+                                <button onClick={() => setConsoleOutput("")} className="text-[10px] text-white/20 hover:text-white transition-colors">Clear</button>
+                            </div>
+                            <div className="flex-1 p-4 font-mono text-sm text-emerald-400 overflow-y-auto whitespace-pre-wrap selection:bg-emerald-500/30">
+                                {consoleOutput}
+                            </div>
+                        </div>
+                    )}
+                    
+                    {/* Persistent AI Transcription Bar */}
+                    {isAIActive && (
+                        <div className="absolute bottom-4 left-4 right-4 z-20">
+                            <div className="bg-black/80 backdrop-blur-md border border-white/10 p-4 rounded-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+                                <div className="flex items-start gap-3">
+                                    <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${partialTranscript ? "bg-emerald-500 animate-pulse" : "bg-emerald-500/40"}`} />
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] uppercase tracking-wider text-emerald-400/70 font-bold">
+                                            {partialTranscript ? "Tutor is speaking..." : "Last Guidance"}
+                                        </p>
+                                        <p className="text-sm text-zinc-100 leading-relaxed">
+                                            {partialTranscript || (storeMessages.filter(m => m.role === 'ai').slice(-1)[0]?.content) || "I'm listening and ready to help..."}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                  </div>
             </div>
 

@@ -26,12 +26,22 @@ export const getVapiTutor = (): any | null => {
              vapiSingleton = null;
         });
         vapiSingleton.on("message", (message: any) => {
-            if (message.type === "transcript" && message.transcriptType === "final") {
-                useTutorStore.getState().addMessage({
-                    role: message.role === 'user' ? 'user' : 'ai',
-                    content: message.transcript,
-                    timestamp: Date.now()
-                });
+            if (message.type === "transcript") {
+                if (message.transcriptType === "final") {
+                    // 1. Add to permanent history
+                    useTutorStore.getState().addMessage({
+                        role: message.role === 'user' ? 'user' : 'ai',
+                        content: message.transcript,
+                        timestamp: Date.now()
+                    });
+                    // 2. Clear partial buffer for this specific role
+                    useTutorStore.getState().setPartialTranscript("");
+                } else if (message.transcriptType === "partial") {
+                    // Only show AI's partial transcripts to the user in the "He is saying..." box
+                    if (message.role === 'assistant') {
+                        useTutorStore.getState().setPartialTranscript(message.transcript);
+                    }
+                }
             }
         });
         vapiSingleton.on("error", (error: any) => {
