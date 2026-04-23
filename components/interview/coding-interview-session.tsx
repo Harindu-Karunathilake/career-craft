@@ -33,7 +33,7 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
     const lkServerUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
     // AI Tutor State
-    const { isAIActive, isMuted } = useTutorStore();
+    const { isAIActive, isMuted, partialTranscript, messages: storeMessages } = useTutorStore();
     const { analyzeCode, isAnalyzing } = useCodeAnalysis();
     // Track previous code to avoid syncing unchanged content
     const lastSyncedCodeRef = useRef<string>("");
@@ -310,11 +310,30 @@ export default function CodingInterviewSession({ sessionId, interviewData }: Cod
                     </div>
                  </div>
                  <div className="flex-1 overflow-hidden relative">
-                    <CodeEditor 
+                     <CodeEditor 
                         initialCode={code} 
                         sessionId={sessionId} 
                         onChange={handleCodeChange} 
                     />
+                    
+                    {/* Persistent AI Transcription Bar */}
+                    {isAIActive && (
+                        <div className="absolute bottom-4 left-4 right-4 z-20">
+                            <div className="bg-black/80 backdrop-blur-md border border-white/10 p-4 rounded-xl shadow-2xl animate-in slide-in-from-bottom-4 duration-300">
+                                <div className="flex items-start gap-3">
+                                    <div className={`mt-1 h-2 w-2 rounded-full shrink-0 ${partialTranscript ? "bg-emerald-500 animate-pulse" : "bg-emerald-500/40"}`} />
+                                    <div className="space-y-1">
+                                        <p className="text-[10px] uppercase tracking-wider text-emerald-400/70 font-bold">
+                                            {partialTranscript ? "Tutor is speaking..." : "Last Guidance"}
+                                        </p>
+                                        <p className="text-sm text-zinc-100 leading-relaxed">
+                                            {partialTranscript || (storeMessages.filter(m => m.role === 'ai').slice(-1)[0]?.content) || "I'm listening and ready to help..."}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
                  </div>
             </div>
 
