@@ -1,12 +1,16 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { firebaseAuth, firebaseDb } from "@/lib/firebase"
+import { firebaseAuth, firebaseDb, firebaseStorage } from "@/lib/firebase"
 import { User, Award, Star, Zap, Shield, Trophy, ExternalLink } from "lucide-react"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
 import Image from "next/image"
 import { motion, Variants } from "framer-motion"
+import { useRef } from "react"
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage"
+import { updateProfile } from "firebase/auth"
+import { Loader2, Camera } from "lucide-react"
 
 const TIER_CONFIG: Record<string, { color: string; icon: React.ReactNode; gradient: string }> = {
   Novice:   { color: "text-slate-400",   icon: <Star className="w-5 h-5" />,   gradient: "from-slate-500/20 to-slate-600/10" },
@@ -37,6 +41,36 @@ export default function ProfilePage() {
   const [photoURL, setPhotoURL] = useState<string | null>(null)
   const [displayName, setDisplayName] = useState<string | null>(null)
   const [email, setEmail] = useState<string | null>(null)
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file || !firebaseAuth.currentUser) return
+
+    setIsUploadingPhoto(true)
+    try {
+      // 1. Upload to Storage
+      const storageRef = ref(firebaseStorage, `users/profile_pics/${firebaseAuth.currentUser.uid}_${Date.now()}`)
+      const snapshot = await uploadBytes(storageRef, file)
+      const url = await getDownloadURL(snapshot.ref)
+
+      // 2. Update Auth Profile
+      await updateProfile(firebaseAuth.currentUser, { photoURL: url })
+
+      // 3. Update Firestore Document
+      const { doc, updateDoc } = await import("firebase/firestore")
+      await updateDoc(doc(firebaseDb, "users", firebaseAuth.currentUser.uid), { photoURL: url })
+
+      // 4. Update UI
+      setPhotoURL(url)
+    } catch (err) {
+      console.error("Error uploading photo:", err)
+    } finally {
+      setIsUploadingPhoto(false)
+      if (fileInputRef.current) fileInputRef.current.value = ''
+    }
+  }
 
   useEffect(() => {
     const unsubscribe = firebaseAuth.onAuthStateChanged(async (user) => {
@@ -145,12 +179,35 @@ export default function ProfilePage() {
           <CardContent className="relative p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6">
 
             {/* Avatar */}
-            <div className="relative flex-shrink-0 h-24 w-24 rounded-full overflow-hidden ring-4 ring-white/20 bg-white/10 flex items-center justify-center">
+            <div className="relative flex-shrink-0 h-24 w-24 rounded-full overflow-hidden ring-4 ring-white/20 bg-white/10 flex items-center justify-center group">
               {photoURL ? (
                 <Image src={photoURL} alt={displayName ?? "Avatar"} fill className="object-cover" />
               ) : (
                 <User className="h-10 w-10 text-white/50" />
               )}
+              
+              {/* Hover Edit Overlay */}
+              <button 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploadingPhoto}
+                className="absolute inset-0 bg-black/50 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
+              >
+                {isUploadingPhoto ? (
+                  <Loader2 className="h-6 w-6 text-white animate-spin" />
+                ) : (
+                  <>
+                    <Camera className="h-6 w-6 text-white mb-1" />
+                    <span className="text-[10px] text-white font-medium">Change</span>
+                  </>
+                )}
+              </button>
+              <input 
+                type="file" 
+                accept="image/*" 
+                ref={fileInputRef} 
+                onChange={handlePhotoUpload} 
+                className="hidden" 
+              />
             </div>
 
             {/* Info */}
