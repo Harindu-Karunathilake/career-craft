@@ -11,6 +11,11 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { v4 as uuidv4 } from "uuid"; 
+import { RichTextEditor } from "@/components/forms/rich-text-editor";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { firebaseStorage } from "@/lib/firebase";
+import { useState, useRef } from "react";
+import { Loader2, Upload } from "lucide-react";
 
 interface CourseBuilderProps {
   chapters: Chapter[];
@@ -18,6 +23,31 @@ interface CourseBuilderProps {
 }
 
 export function CourseBuilder({ chapters, setChapters }: CourseBuilderProps) {
+  const [uploadingLessonId, setUploadingLessonId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [activeUploadContext, setActiveUploadContext] = useState<{ chapterId: string, lessonId: string } | null>(null);
+
+  const handleLessonVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file || !activeUploadContext) return;
+      
+      const { chapterId, lessonId } = activeUploadContext;
+      setUploadingLessonId(lessonId);
+      
+      try {
+          const storageRef = ref(firebaseStorage, `courses/lesson_videos/${Date.now()}_${file.name}`);
+          const snapshot = await uploadBytes(storageRef, file);
+          const url = await getDownloadURL(snapshot.ref);
+          updateLesson(chapterId, lessonId, "videoUrl", url);
+      } catch (err) {
+          console.error("Failed to upload lesson video:", err);
+      } finally {
+          setUploadingLessonId(null);
+          setActiveUploadContext(null);
+          if (fileInputRef.current) fileInputRef.current.value = "";
+      }
+  };
+
   const addChapter = () => {
     setChapters([
       ...chapters,
@@ -99,6 +129,9 @@ export function CourseBuilder({ chapters, setChapters }: CourseBuilderProps) {
           <Plus className="mr-2 h-4 w-4" /> Add Chapter
         </Button>
       </div>
+
+      {/* Hidden input for video uploads */}
+      <input type="file" accept="video/*" ref={fileInputRef} onChange={handleLessonVideoUpload} className="hidden" />
 
       {chapters.length === 0 && (
         <div className="text-center p-8 border border-dashed rounded-lg bg-muted/20">
@@ -183,22 +216,35 @@ export function CourseBuilder({ chapters, setChapters }: CourseBuilderProps) {
                                  </div>
                                 
                                 <div className="space-y-1">
-                                    <Label className="text-xs flex items-center gap-1"><Video className="h-3 w-3" /> Video URL</Label>
-                                    <Input 
-                                        placeholder="https://youtube.com/..." 
-                                        className="h-8 text-xs"
-                                        value={lesson.videoUrl}
-                                        onChange={(e) => updateLesson(chapter.id, lesson.id, "videoUrl", e.target.value)}
-                                    />
+                                    <Label className="text-xs flex items-center gap-1"><Video className="h-3 w-3" /> Video URL / File</Label>
+                                    <div className="flex items-center gap-2">
+                                        <Input 
+                                            placeholder="https://youtube.com/... or upload" 
+                                            className="h-8 text-xs flex-1"
+                                            value={lesson.videoUrl}
+                                            onChange={(e) => updateLesson(chapter.id, lesson.id, "videoUrl", e.target.value)}
+                                        />
+                                        <Button
+                                            type="button"
+                                            variant="secondary"
+                                            size="icon"
+                                            className="h-8 w-8 shrink-0"
+                                            disabled={uploadingLessonId === lesson.id}
+                                            onClick={() => {
+                                                setActiveUploadContext({ chapterId: chapter.id, lessonId: lesson.id });
+                                                fileInputRef.current?.click();
+                                            }}
+                                        >
+                                            {uploadingLessonId === lesson.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                                        </Button>
+                                    </div>
                                 </div>
 
                                 <div className="space-y-1">
                                      <Label className="text-xs flex items-center gap-1"><FileText className="h-3 w-3" /> Description / Content</Label>
-                                     <Textarea 
-                                        placeholder="Lesson content..." 
-                                        className="min-h-[60px] text-xs resize-y"
-                                        value={lesson.content}
-                                        onChange={(e) => updateLesson(chapter.id, lesson.id, "content", e.target.value)}
+                                     <RichTextEditor 
+                                        content={lesson.content}
+                                        onChange={(html) => updateLesson(chapter.id, lesson.id, "content", html)}
                                      />
                                 </div>
                             </CardContent>

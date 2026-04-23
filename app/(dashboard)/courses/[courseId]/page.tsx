@@ -348,28 +348,43 @@ export default function CourseDetailsPage() {
             // ── Enrolled / free / own course: show lesson ──────────────────
             activeLesson ? (
               <div className="space-y-4">
-                <div className="aspect-video bg-black rounded-lg overflow-hidden relative group">
-                  {(() => {
-                    const getYouTubeEmbedUrl = (url: string) => {
-                      try {
-                        if (url.includes("watch?v=")) return `https://www.youtube.com/embed/${url.split("watch?v=")[1].split("&")[0]}`
-                        if (url.includes("youtu.be/")) return `https://www.youtube.com/embed/${url.split("youtu.be/")[1].split("?")[0]}`
-                        if (url.includes("embed/")) return url
-                        return null
-                      } catch { return null }
-                    }
-                    const embedUrl = getYouTubeEmbedUrl(activeLesson.videoUrl || "")
-                    return embedUrl ? (
-                      <iframe src={embedUrl} className="w-full h-full" title={activeLesson.title}
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
-                    ) : (
-                      <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
-                        <MonitorPlay className="h-16 w-16 mb-4 opacity-50" />
-                        <p>Invalid Video URL</p>
-                      </div>
-                    )
-                  })()}
-                </div>
+                {activeLesson.videoUrl && (
+                  <div className="aspect-video bg-black rounded-lg overflow-hidden relative group">
+                    {(() => {
+                      const url = activeLesson.videoUrl || "";
+                      
+                      // Check if it's a direct video file (mp4, webm, ogg or Firebase Storage URL)
+                      const isDirectVideo = url.includes('.mp4') || url.includes('.webm') || url.includes('firebasestorage.googleapis.com');
+                      
+                      if (isDirectVideo) {
+                          return (
+                              <video src={url} controls className="w-full h-full object-contain" />
+                          );
+                      }
+
+                      // YouTube logic
+                      const getYouTubeEmbedUrl = (url: string) => {
+                        try {
+                          if (url.includes("watch?v=")) return `https://www.youtube.com/embed/${url.split("watch?v=")[1].split("&")[0]}`
+                          if (url.includes("youtu.be/")) return `https://www.youtube.com/embed/${url.split("youtu.be/")[1].split("?")[0]}`
+                          if (url.includes("embed/")) return url
+                          return null
+                        } catch { return null }
+                      }
+                      
+                      const embedUrl = getYouTubeEmbedUrl(url)
+                      return embedUrl ? (
+                        <iframe src={embedUrl} className="w-full h-full" title={activeLesson.title}
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen />
+                      ) : (
+                        <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground p-4 text-center">
+                          <MonitorPlay className="h-16 w-16 mb-4 opacity-50" />
+                          <p>Invalid Video URL</p>
+                        </div>
+                      )
+                    })()}
+                  </div>
+                )}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center justify-between">
@@ -377,8 +392,17 @@ export default function CourseDetailsPage() {
                       {activeLesson.duration && <span className="text-sm font-normal text-muted-foreground flex items-center gap-1"><Clock className="h-3 w-3" /> {activeLesson.duration} min</span>}
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="prose dark:prose-invert max-w-none text-sm">
-                    <p className="whitespace-pre-wrap">{activeLesson.content || activeLesson.description || "No content added yet."}</p>
+                  <CardContent className="prose dark:prose-invert max-w-none text-sm p-6 pt-0">
+                    {(() => {
+                        const content = activeLesson.content || activeLesson.description || "No content added yet.";
+                        const isHtml = /<[a-z][\s\S]*>/i.test(content);
+                        
+                        if (isHtml) {
+                            return <div dangerouslySetInnerHTML={{ __html: content }} />;
+                        }
+                        
+                        return <p className="whitespace-pre-wrap">{content}</p>;
+                    })()}
                     
                     {/* Mark as Complete Button */}
                     {isEnrolled && enrollmentId && !completedLessons.includes(activeLesson.id) && (
