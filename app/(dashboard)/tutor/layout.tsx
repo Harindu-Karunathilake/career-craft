@@ -1,4 +1,11 @@
 import type { ReactNode } from "react"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Tutor Workspace | Career Craft",
+  description: "Manage your courses, students, and professional profile.",
+}
+
 
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { TutorSidebar } from "@/components/dashboard/tutor-sidebar"

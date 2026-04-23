@@ -1,4 +1,11 @@
 import type { ReactNode } from "react"
+import type { Metadata } from "next"
+
+export const metadata: Metadata = {
+  title: "Dashboard | Career Craft",
+  description: "Manage your career progress, resumes, and interviews in one place.",
+}
+
 
 import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar"
 import { UserSidebar } from "@/components/dashboard/user-sidebar"
