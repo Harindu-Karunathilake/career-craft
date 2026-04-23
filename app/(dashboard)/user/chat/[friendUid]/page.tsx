@@ -132,26 +132,26 @@ export default function ChatPage({ params }: { params: Promise<{ friendUid: stri
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-140px)] max-w-3xl mx-auto">
+    <div className="flex flex-col" style={{ height: "calc(100vh - 73px)", margin: "-2rem -1.5rem -2rem" }}>
 
       {/* Header */}
-      <div className="flex items-center gap-3 pb-4 border-b border-white/10 mb-4">
+      <div className="flex items-center gap-4 px-6 py-4 border-b border-white/10 bg-black/20 backdrop-blur-md flex-shrink-0">
         <Link href={`${dashBase}/friends`}
-          className="flex h-8 w-8 items-center justify-center rounded-lg bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors"
+          className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 text-white/60 hover:text-white transition-colors flex-shrink-0"
         >
           <ArrowLeft className="h-4 w-4" />
         </Link>
 
-        <Link href={`${dashBase}/profile/${friend.uid}`} className="flex items-center gap-3 group">
-          <div className="relative h-10 w-10 rounded-full overflow-hidden ring-2 ring-primary/30 bg-white/10 flex items-center justify-center flex-shrink-0">
+        <Link href={`${dashBase}/profile/${friend.uid}`} className="flex items-center gap-3 group min-w-0">
+          <div className="relative h-11 w-11 rounded-full overflow-hidden ring-2 ring-primary/40 bg-white/10 flex items-center justify-center flex-shrink-0">
             {friend.photoURL ? (
               <Image src={friend.photoURL} alt={friend.displayName} fill className="object-cover" />
             ) : (
-              <span className="text-primary font-bold">{friend.displayName?.[0]?.toUpperCase()}</span>
+              <span className="text-primary font-bold text-lg">{friend.displayName?.[0]?.toUpperCase()}</span>
             )}
           </div>
-          <div>
-            <p className="font-semibold text-white group-hover:text-primary transition-colors">
+          <div className="min-w-0">
+            <p className="font-semibold text-white group-hover:text-primary transition-colors truncate">
               {friend.displayName}
             </p>
             <p className="text-xs text-white/40">{friend.tier || "Novice"}</p>
@@ -160,10 +160,10 @@ export default function ChatPage({ params }: { params: Promise<{ friendUid: stri
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-3 px-1 pr-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
+      <div className="flex-1 overflow-y-auto px-6 py-6 space-y-2 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10">
         {messages.length === 0 && (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
-            <MessageCircle className="h-10 w-10 text-white/20" />
+            <MessageCircle className="h-12 w-12 text-white/10" />
             <p className="text-white/30 text-sm">No messages yet. Say hello! 👋</p>
           </div>
         )}
@@ -178,14 +178,14 @@ export default function ChatPage({ params }: { params: Promise<{ friendUid: stri
               initial={{ opacity: 0, y: 8 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.2 }}
-              className={`flex ${isMe ? "justify-end" : "justify-start"}`}
+              className={`flex ${isMe ? "justify-end" : "justify-start"} ${isFirst ? "mt-4" : "mt-0.5"}`}
             >
               <div
-                className={`max-w-[70%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                className={`max-w-[60%] xl:max-w-[50%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                   isMe
                     ? "bg-primary/25 text-white rounded-br-sm"
                     : "bg-white/10 text-white rounded-bl-sm"
-                } ${isFirst ? "" : "mt-0.5"}`}
+                }`}
               >
                 {msg.text}
               </div>
@@ -196,15 +196,15 @@ export default function ChatPage({ params }: { params: Promise<{ friendUid: stri
       </div>
 
       {/* Input */}
-      <div className="flex items-end gap-3 mt-4 pt-4 border-t border-white/10">
+      <div className="flex items-end gap-3 px-6 py-4 border-t border-white/10 bg-black/20 backdrop-blur-md flex-shrink-0">
         <textarea
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type a message…"
           rows={1}
-          className="flex-1 resize-none rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 backdrop-blur-md transition max-h-32 overflow-y-auto"
-          style={{ lineHeight: "1.5" }}
+          className="flex-1 resize-none rounded-2xl border border-white/10 bg-white/5 px-5 py-3 text-sm text-white placeholder-white/30 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/50 backdrop-blur-md transition max-h-40 overflow-y-auto"
+          style={{ lineHeight: "1.6" }}
         />
         <button
           onClick={handleSend}
