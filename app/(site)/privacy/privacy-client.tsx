@@ -63,7 +63,7 @@ export function PrivacyPolicyClient() {
           <section className="space-y-4">
             <h2 className="text-2xl font-semibold text-white">5. Data Security</h2>
             <p>
-              We have put in place appropriate security measures to prevent your personal data from being accidentally lost, used or accessed in an unauthorized way, altered or disclosed. We use Firebase's enterprise-grade security and encryption for all data storage.
+              We have put in place appropriate security measures to prevent your personal data from being accidentally lost, used or accessed in an unauthorized way, altered or disclosed. We use Firebase&apos;s enterprise-grade security and encryption for all data storage.
             </p>
           </section>
 
