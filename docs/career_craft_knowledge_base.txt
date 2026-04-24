@@ -102,6 +102,8 @@ To provide step-by-step guidance, the chatbot must be familiar with the followin
 - **Blog**: `/blog` - Articles and career resources.
 - **Community**: `/community` - Public feed of shared interviews and courses.
 - **Resume Analysis**: `/resume` - Direct access to AI resume tools.
+- **Privacy Policy**: `/privacy` - Data protection and AI processing details.
+- **Terms & Conditions**: `/terms` - Platform usage rules and legal agreements.
 - **Login/Register**: `/login`, `/register`.
 
 ### Student (User) Navigation
