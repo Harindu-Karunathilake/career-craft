@@ -30,7 +30,7 @@ service cloud.firestore {
       // Owner can read all their own interviews.
       // Others can only read published ones (get by ID — list access still owner-only).
       match /interviews/{interviewId} {
-        allow get:    if isSignedIn();   // needed for collectionGroup published queries
+        allow get:    if resource.data.isPublished == true || isOwner(userId);
         allow list:   if isOwner(userId);
         allow create: if isOwner(userId);
         allow update: if isOwner(userId);
@@ -58,7 +58,7 @@ service cloud.firestore {
 
       // Badges — owner writes, anyone signed-in can read (public profiles)
       match /badges/{badgeId} {
-        allow read:  if isSignedIn();
+        allow read:  if true;
         allow write: if isOwner(userId);
       }
 
@@ -82,7 +82,7 @@ service cloud.firestore {
     // covered by the per-document rule above. The collectionGroup rule
     // below handles the cross-user LIST query.
     match /{path=**}/interviews/{interviewId} {
-      allow read: if isSignedIn() && resource.data.isPublished == true;
+      allow read: if resource.data.isPublished == true;
     }
 
     // ─── Friend Requests ────────────────────────────────────────────────────
