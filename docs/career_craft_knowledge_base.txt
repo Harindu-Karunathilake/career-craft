@@ -1,0 +1,136 @@
+# CareerCraft Project Knowledge Base
+# Comprehensive documentation of all platform features for AI training.
+
+## 1. Project Identity & Mission
+CareerCraft is a premium career development platform that leverages AI to provide a high-end, interactive preparation environment for job seekers. It combines AI-driven coaching (interviews and resumes) with a social learning community and a comprehensive course-based gamification system.
+
+## 2. Technology Stack
+- Framework: Next.js (App Router)
+- Styling: Vanilla CSS (Custom premium aesthetics: glassmorphism, smooth animations)
+- Backend: Firebase (Authentication, Firestore Database, Cloud Functions, Storage)
+- AI Integration: 
+    - Google Gemini: For interview feedback, resume analysis, and coding feedback.
+    - VAPI: Real-time AI voice interaction for mock interviews.
+- Payment Gateway: PayHere integration for course purchases.
+- Icons: Lucide React.
+- Typography: Modern fonts (Geist, Outfit, Inter).
+
+## 3. User Roles
+- **Student (User)**: Can participate in mock interviews, upload resumes for analysis, enroll in courses, earn XP/badges, and interact socially.
+- **Tutor**: Verified users who can create, manage, and sell courses. They have access to a specialized Tutor Dashboard with earnings and student analytics.
+- **Admin**: Platform managers who oversee tutor applications, moderate courses, and manage reported content.
+
+## 4. AI Tutor & Voice Interview
+- **AI Personal Tutor**: The platform provides a personalized AI Tutor experience during mock interviews.
+- **Voice Interview**: 
+    - Real-time conversation powered by VAPI.
+    - Users can interact with an AI interviewer using their voice.
+    - Features include mute/unmute controls and "End Call" functionality.
+- **Resume Personalization**:
+    - Users can upload a **Resume (PDF)** during interview setup.
+    - The AI Tutor analyzes the resume's skills, projects, and experience to tailor questions specifically to the candidate.
+    - The interviewer is briefed with a candidate summary and name extracted from the resume for a highly realistic experience.
+
+## 5. Live Coding Interview & Compiler
+- **Coding Mode**: A specialized interview mode for technical roles.
+- **Interactive Code Editor**: A full-featured IDE integrated into the interview session.
+- **Built-in Compiler/Execution Engine**:
+    - Users can write and run code in real-time.
+    - Supports multiple programming languages (e.g., JavaScript, Python).
+    - AI provides immediate feedback on code logic, complexity, and best practices.
+- **Practical Challenges**: In coding mode, the AI Tutor focuses on "Write a function..." style practical tasks rather than just theory.
+
+## 6. AI Resume Analysis
+- **Resume Scan**: Users upload PDF or DOCX files.
+- **ATS Compatibility**: The AI analyzes the resume against industry standards and specific job descriptions.
+- **Optimization Suggestions**: Provides actionable feedback on formatting, keyword optimization, and content improvements to pass Applicant Tracking Systems.
+
+## 7. AI Job Recommendations
+- **Automated Matching**: The system extracts skills and experience from the user's latest resume using AI.
+- **Real-time Job Search**: Generates optimized search queries and fetches live job listings from external APIs like FindWork.dev and Jobicy.
+- **AI Ranking**: A career coach AI ranks the jobs based on match percentage (0-100%) and provides a specific reason why each job is a good fit.
+
+## 8. Course Builder & LMS
+- **Course Builder (Tutors Only)**:
+    - Dedicated interface for tutors to create and structure courses.
+    - Ability to add **Chapters** and **Lessons**.
+    - Supports both **Text-based** and **Video-based** lessons.
+    - Tutors can set a **Price** (in LKR) and upload a **Cover Image**.
+- **Course Enrollment**: Students can browse the community, purchase courses via PayHere, and track progress.
+- **Reporting**: 
+    - Users can "Report" (flag) a course for inappropriate content or low quality.
+    - Reports are sent to the Admin Dashboard for moderation.
+
+## 9. Blog & Resources
+- **Industry Insights**: Professional articles on interview tips, career growth, and industry trends.
+- **Interactive Content**: Engaging posts to help users stay informed about the evolving job market.
+
+## 10. Gamification System
+- **Career XP**: Users earn 10 XP for every lesson completed.
+- **Tiers**: Progress through levels based on total XP:
+    - Novice: 0 - 99 XP
+    - Explorer: 100 - 499 XP
+    - Scholar: 500 - 999 XP
+    - Master: 1000+ XP
+- **Badges**: Awarded automatically upon completion of an entire course. Badges are visually premium and shareable on LinkedIn.
+
+## 11. Social Networking Features
+- **Profiles**: Public-facing user profiles showing their tier, XP, badges, and shared activity.
+- **Friends System**:
+    - Search for other users and send friend requests.
+    - Suggestion Engine: Recommends friends based on mutual connections, same tier, and similar XP.
+- **Messaging**: Real-time direct messaging between friends with integrated notifications.
+- **Community Sharing**: Users can publish their mock interview results or success stories to the community feed.
+
+## 12. Dashboards & Financing
+- **Student Dashboard**: Overview of enrolled courses, recent interview results, friends list, and current gamification status (XP/Tier).
+- **Tutor Dashboard & Financing**:
+    - **Revenue Tracking**: View total estimated revenue from course sales (in LKR).
+    - **Earnings Breakdown**: Detailed analytics showing revenue from "paid" enrollments.
+    - **Student Analytics**: Total student count (paid, free, and completed enrollments).
+    - **Course Performance**: Analytics chart showing top courses by views.
+    - **Banking**: Manage bank account details for payouts and earnings withdrawal.
+- **Admin Dashboard**:
+    - **Tutor Verification**: Review CVs and details of tutor applicants. Approve or Reject status.
+    - **Content Moderation**: Review reported courses and take action (dismiss or delete).
+
+## 13. Site Navigation & User Flow
+To provide step-by-step guidance, the chatbot must be familiar with the following paths:
+
+### Public Pages (Accessible to all)
+- **Home**: `/` - Landing page with platform overview.
+- **Blog**: `/blog` - Articles and career resources.
+- **Community**: `/community` - Public feed of shared interviews and courses.
+- **Resume Analysis**: `/resume` - Direct access to AI resume tools.
+- **Login/Register**: `/login`, `/register`.
+
+### Student (User) Navigation
+Accessed via the **User Sidebar**:
+1. **Overview**: `/user` - Main student dashboard with XP/Tier stats.
+2. **Interviews**: `/user/interviews` - History of mock interviews and AI feedback reports.
+3. **Resume**: `/user/resume` - Management of uploaded resumes and analysis history.
+4. **Community**: `/user/community` - Browse and learn from other users' shared interviews.
+5. **Friends**: `/user/friends` - Social hub to search for peers, manage requests, and chat.
+6. **Settings**: `/user/settings` - Profile and account preferences.
+
+### Tutor Navigation
+Accessed via the **Tutor Sidebar**:
+1. **Overview**: `/tutor` - Tutor-specific dashboard with course and student analytics.
+2. **Courses**: `/tutor/courses` - Access to the **Course Builder** to manage chapters and lessons.
+3. **Interviews**: `/tutor/interviews` - Tutor's personal interview history.
+4. **Earnings**: `/tutor/earnings` - Financial overview, revenue tracking, and payout management.
+5. **Friends/Community**: Similar to student roles but within the tutor workspace.
+6. **Settings**: `/tutor/settings` - Professional profile and banking details.
+
+### Admin Navigation
+Accessed via the **Admin Sidebar**:
+1. **Overview**: `/admin` - System-wide stats.
+2. **Users**: `/admin/users` - User management and **Tutor Verification** (Review CVs).
+3. **Payouts**: `/admin/payouts` - Managing and approving tutor earnings withdrawals.
+4. **Courses & Reports**: `/admin/courses` - **Content Moderation** for reported or flagged courses.
+
+## 14. Common Workflows & Troubleshooting
+- **Starting an Interview**: Navigate to **Interviews** -> Click **"New Interview"** -> Configure settings (Role, Topic, Mode) -> Start.
+- **Creating a Course**: Go to **Tutor Dashboard** -> **Courses** -> Click **"Create Course"** -> Use the **Course Builder** to add content.
+- **Checking Earnings**: Tutors should navigate to the **Earnings** tab to see their total revenue in LKR and payout status.
+- **Finding Friends**: Go to the **Friends** tab -> Use the **Search Bar** or check **Friend Suggestions**.
