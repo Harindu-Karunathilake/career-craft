@@ -5,7 +5,7 @@ const apiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_GENERATIVE_AI_AP
 console.log("DEBUG: Using API Key:", apiKey.substring(0, 10) + "...");
 const genAI = new GoogleGenerativeAI(apiKey);
 // Define model constant locally to prevent cross-workspace import issues in Firebase deployment
-const DEFAULT_MODEL = "gemini-2.5-pro";
+const DEFAULT_MODEL = "gemini-2.5-flash";
 const model = genAI.getGenerativeModel({ model: DEFAULT_MODEL });
 
 export interface Feedback {
