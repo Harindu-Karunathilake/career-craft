@@ -1,7 +1,5 @@
-import { DEFAULT_AI_MODEL } from '@/constants/ai';
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
 import { z } from 'zod';
+import { generateObjectWithFallback } from '@/lib/ai-helper';
 
 export const maxDuration = 30;
 
@@ -18,16 +16,14 @@ export async function POST(req: Request) {
             return new Response(JSON.stringify({ error: 'Role is required' }), { status: 400 });
         }
 
-        // Retry logic for rate limits
-        const generateWithRetry = async (retries = 3, delay = 1000) => {
-            try {
-                return await generateObject({
-                    model: google(DEFAULT_AI_MODEL), // Fallback to standard 1.0 Pro
-                    schema: z.object({
-                        isValid: z.boolean(),
-                        message: z.string().describe("A helpful message explaining why the role is invalid or a confirmation if it is valid. If invalid, suggest 2-3 suitable IT roles."),
-                    }),
-                    prompt: `
+        const schema = z.object({
+            isValid: z.boolean(),
+            message: z.string().describe("A helpful message explaining why the role is invalid or a confirmation if it is valid. If invalid, suggest 2-3 suitable IT roles."),
+        });
+
+        const result = await generateObjectWithFallback<z.infer<typeof schema>>({
+            schema,
+            prompt: `
             Analyze the job role: "${role}".
             Determine if this job role is a valid and recognized role within the Information Technology (IT), Software Engineering, Data Science, or tech industry.
             
@@ -37,18 +33,7 @@ export async function POST(req: Request) {
             
             Return a boolean 'isValid' and a 'message'.
           `,
-                });
-            } catch (error: any) {
-                if (retries > 0 && (error?.message?.includes('429') || error?.message?.includes('Quota'))) {
-                    console.log(`Rate limit hit (validation), retrying in ${delay}ms...`);
-                    await new Promise(resolve => setTimeout(resolve, delay));
-                    return generateWithRetry(retries - 1, delay * 2);
-                }
-                throw error;
-            }
-        };
-
-        const result = await generateWithRetry();
+        });
 
         return new Response(JSON.stringify(result.object), {
             status: 200,
@@ -58,8 +43,8 @@ export async function POST(req: Request) {
     } catch (error) {
         console.error('Validation Error:', error);
         return new Response(JSON.stringify({
-            isValid: true, // Fail open if API fails to avoid blocking users unnecessarily, or handle as error 
+            isValid: true, // Fail open if API fails to avoid blocking users unnecessarily
             message: "Validation service unavailable, proceeding with caution."
-        }), { status: 200 }); // Returning 200 so frontend can handle gracefully, or change to 500
+        }), { status: 200 });
     }
 }
