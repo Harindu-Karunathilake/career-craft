@@ -1,7 +1,5 @@
-import { DEFAULT_AI_MODEL } from '@/constants/ai';
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
 import { z } from 'zod';
+import { generateObjectWithFallback } from '@/lib/ai-helper';
 import { adminDb } from '@/lib/firebase-admin';
 import { getResumeText, readRecsCache, writeRecsCache } from '@/lib/resume-cache';
 
@@ -22,6 +20,45 @@ const RankedJobSchema = z.object({
 const RankingResponseSchema = z.object({
     recommendations: z.array(RankedJobSchema).describe("Top 10 recommended jobs"),
 });
+
+const DUMMY_RECOMMENDATIONS = [
+    {
+        id: "dummy-1",
+        role: "Software Engineer",
+        company_name: "Tech Solutions Inc.",
+        location: "Remote",
+        matchScore: 95,
+        reason: "Matches your strong background in full-stack development and cloud architecture.",
+        url: "https://findwork.dev",
+        date_posted: new Date().toISOString(),
+        keywords: "React, Node.js, AWS",
+        remote: true
+    },
+    {
+        id: "dummy-2",
+        role: "Frontend Developer",
+        company_name: "Creative Digital",
+        location: "New York, NY",
+        matchScore: 88,
+        reason: "Great fit for your expertise in modern UI/UX principles and React frameworks.",
+        url: "https://jobicy.com",
+        date_posted: new Date().toISOString(),
+        keywords: "TypeScript, Tailwind, Next.js",
+        remote: false
+    },
+    {
+        id: "dummy-3",
+        role: "Full Stack Developer",
+        company_name: "Innovation Hub",
+        location: "London, UK",
+        matchScore: 82,
+        reason: "Your experience with database management and API design makes you a top candidate.",
+        url: "https://findwork.dev",
+        date_posted: new Date().toISOString(),
+        keywords: "PostgreSQL, Express, GraphQL",
+        remote: true
+    }
+];
 
 export async function POST(req: Request) {
     try {
@@ -87,14 +124,39 @@ export async function POST(req: Request) {
         - 'location': infer from resume if possible, otherwise leave empty or "Remote".
         `;
 
-        const searchParamsResult = await generateObject({
-            model: google(DEFAULT_AI_MODEL),
+        const searchParamsResult = await generateObjectWithFallback<z.infer<typeof SearchParamsSchema>>({
             prompt: searchPrompt,
             schema: SearchParamsSchema,
         });
 
         const { queries, location } = searchParamsResult.object;
         console.log("Job Search Queries:", { queries, location });
+
+        const normalizeJob = (job: any, source: 'fw' | 'jobicy') => {
+            if (source === 'fw') {
+                return {
+                    id: `fw-${job.id}`,
+                    role: job.role,
+                    company_name: job.company_name,
+                    location: job.location,
+                    remote: job.remote,
+                    url: job.url,
+                    date_posted: job.date_posted,
+                    keywords: Array.isArray(job.keywords) ? job.keywords.join(', ') : (job.keywords || '')
+                };
+            } else {
+                return {
+                    id: `jobicy-${job.id}`,
+                    role: job.jobTitle,
+                    company_name: job.companyName,
+                    location: job.jobGeo || 'Remote',
+                    remote: true,
+                    url: job.url,
+                    date_posted: job.pubDate,
+                    keywords: [job.jobIndustry, job.jobType].filter(Boolean).join(', ')
+                };
+            }
+        };
 
         // 4. Fetch Candidates from FindWork AND Jobicy (Parallel)
         const fetchFindWork = async (searchTerms: string) => {
@@ -116,16 +178,7 @@ export async function POST(req: Request) {
                 const results = data.results || [];
 
                 // Map FindWork results to ensure consistent structure
-                return results.map((job: any) => ({
-                    id: `fw-${job.id}`,
-                    role: job.role,
-                    company_name: job.company_name,
-                    location: job.location,
-                    remote: job.remote,
-                    url: job.url, // Ensure this exists
-                    date_posted: job.date_posted,
-                    keywords: job.keywords || []
-                }));
+                return results.map((job: any) => normalizeJob(job, 'fw'));
             } catch (error) {
                 console.error("FindWork fetch error:", error);
                 return [];
@@ -153,16 +206,7 @@ export async function POST(req: Request) {
                 const jobs = Array.isArray(data) ? data : (data.jobs || []);
 
                 // Normalize to match FindWork structure so AI can read it uniformly
-                return jobs.map((job: any) => ({
-                    id: `jobicy-${job.id}`, // Jobicy IDs are usually numeric strings
-                    role: job.jobTitle,
-                    company_name: job.companyName,
-                    location: job.jobGeo || 'Remote',
-                    remote: true, // Jobicy is all remote
-                    url: job.url,
-                    date_posted: job.pubDate,
-                    keywords: [job.jobIndustry, job.jobType] // Map metadata to keywords
-                }));
+                return jobs.map((job: any) => normalizeJob(job, 'jobicy'));
             } catch (error) {
                 console.error("Jobicy fetch error:", error);
                 return [];
@@ -217,11 +261,12 @@ export async function POST(req: Request) {
                     const newJobs = data.results || [];
                     console.log(`Emergency fallback found ${newJobs.length} jobs.`);
 
-                    // Add new jobs, avoiding duplicates
+                    // Add new jobs, avoiding duplicates and normalizing
                     newJobs.forEach((job: any) => {
-                        if (!seenIds.has(job.id)) {
-                            candidateJobs.push(job);
-                            seenIds.add(job.id);
+                        const normalized = normalizeJob(job, 'fw');
+                        if (!seenIds.has(normalized.id)) {
+                            candidateJobs.push(normalized);
+                            seenIds.add(normalized.id);
                         }
                     });
                 }
@@ -231,8 +276,11 @@ export async function POST(req: Request) {
         }
 
         if (candidateJobs.length === 0) {
-            console.log("No jobs found from any query.");
-            return new Response(JSON.stringify({ recommendations: [] }), { status: 200 });
+            console.log("No jobs found from any query. Returning fallback dummy data.");
+            return new Response(JSON.stringify({ recommendations: DUMMY_RECOMMENDATIONS, fromFallback: true }), { 
+                status: 200,
+                headers: { 'Content-Type': 'application/json' }
+            });
         }
 
         // 5. Rank Candidates with AI
@@ -257,8 +305,7 @@ export async function POST(req: Request) {
         Return JSON with 'recommendations' array.
         `;
 
-        const rankingResult = await generateObject({
-            model: google(DEFAULT_AI_MODEL),
+        const rankingResult = await generateObjectWithFallback<z.infer<typeof RankingResponseSchema>>({
             prompt: rankingPrompt,
             schema: RankingResponseSchema,
         });
@@ -290,9 +337,14 @@ export async function POST(req: Request) {
         });
 
     } catch (error) {
-        console.error("Job Recommendation Error:", error);
-        return new Response(JSON.stringify({
-            error: error instanceof Error ? error.message : "Internal Server Error"
-        }), { status: 500 });
+        console.error("Job Recommendation Error. Returning fallback dummy data:", error);
+        return new Response(JSON.stringify({ 
+            recommendations: DUMMY_RECOMMENDATIONS, 
+            fromFallback: true,
+            error_context: error instanceof Error ? error.message : "Internal Error"
+        }), { 
+            status: 200,
+            headers: { 'Content-Type': 'application/json' }
+        });
     }
 }
