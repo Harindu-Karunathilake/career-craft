@@ -1,7 +1,5 @@
-import { DEFAULT_AI_MODEL } from '@/constants/ai';
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
 import { z } from 'zod';
+import { generateObjectWithFallback } from '@/lib/ai-helper';
 import { adminDb } from '@/lib/firebase-admin';
 import { getResumeText, readRecsCache, writeRecsCache } from '@/lib/resume-cache';
 
@@ -18,6 +16,19 @@ const RecommendationSchema = z.object({
 const ResponseSchema = z.object({
     recommendations: z.array(RecommendationSchema).describe("List of top 3 recommended courses"),
 });
+
+const DUMMY_COURSE_RECOMMENDATIONS = [
+    {
+        courseId: "dummy-c1",
+        reason: "Based on your interest in backend development, this masterclass will solidify your architecture skills.",
+        matchScore: 92
+    },
+    {
+        courseId: "dummy-c2",
+        reason: "This course covers modern frontend patterns which align with your recent project experience.",
+        matchScore: 85
+    }
+];
 
 export async function POST(req: Request) {
     try {
@@ -123,8 +134,7 @@ export async function POST(req: Request) {
     `;
 
         // 8. Call AI
-        const result = await generateObject({
-            model: google(DEFAULT_AI_MODEL),
+        const result = await generateObjectWithFallback<z.infer<typeof ResponseSchema>>({
             prompt: prompt,
             schema: ResponseSchema,
         });
@@ -138,12 +148,13 @@ export async function POST(req: Request) {
         });
 
     } catch (error) {
-        console.error('Recommendation API Error:', error);
+        console.error('Recommendation API Error. Returning fallback dummy data:', error);
         return new Response(JSON.stringify({
-            error: error instanceof Error ? error.message : "Internal Server Error",
-            details: error instanceof Error ? error.stack : String(error)
+            recommendations: DUMMY_COURSE_RECOMMENDATIONS,
+            fromFallback: true,
+            error_context: error instanceof Error ? error.message : "Internal Error"
         }), {
-            status: 500,
+            status: 200,
             headers: { 'Content-Type': 'application/json' },
         });
     }

@@ -1,7 +1,6 @@
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
+import { z } from 'zod';
+import { generateObjectWithFallback } from '@/lib/ai-helper';
 import { NextResponse } from 'next/server';
-import { DEFAULT_AI_MODEL } from '@/constants/ai';
 import { feedbackSchema } from '@/constants/interview';
 import { adminDb } from '@/lib/firebase-admin';
 import { FieldValue } from 'firebase-admin/firestore';
@@ -28,9 +27,7 @@ export async function POST(req: Request) {
         const questions: string[] = interviewData.questions || [];
         const problemContext = questions[currentIndex] || 'General programming problem';
 
-        // Generate structured feedback using Gemini via Vercel AI SDK
-        const { object: feedback } = await generateObject({
-            model: google(DEFAULT_AI_MODEL),
+        const { object: feedback } = await generateObjectWithFallback<z.infer<typeof feedbackSchema>>({
             schema: feedbackSchema,
             system: "You are a senior software engineer conducting a technical coding interview. Evaluate the candidate's code fairly and thoroughly.",
             prompt: `

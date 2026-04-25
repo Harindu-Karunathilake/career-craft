@@ -1,7 +1,5 @@
-import { DEFAULT_AI_MODEL } from '@/constants/ai';
-import { google } from '@ai-sdk/google';
-import { generateObject } from 'ai';
 import { z } from 'zod';
+import { generateObjectWithFallback } from '@/lib/ai-helper';
 import { cacheGet, cacheSet } from '@/lib/redis';
 
 export const maxDuration = 30;
@@ -53,11 +51,11 @@ export async function POST(req: Request) {
         // ── Generate via Gemini ──────────────────────────────────────────────
         const generateWithRetry = async (retries = 3, delay = 1000) => {
             try {
-                return await generateObject({
-                    model: google(DEFAULT_AI_MODEL),
-                    schema: z.object({
-                        questions: z.array(z.string()),
-                    }),
+                const schema = z.object({
+                    questions: z.array(z.string()),
+                });
+                return await generateObjectWithFallback<z.infer<typeof schema>>({
+                    schema,
                     prompt: `
                     Prepare ${questionCount} ${interviewMode === 'coding' ? 'coding problems' : (type || 'technical') + ' interview questions'} for a ${role} position.
                     Experience Level: ${experience}.

@@ -9,6 +9,7 @@ jest.mock('ai', () => ({
 }))
 
 jest.mock('@ai-sdk/google', () => ({
+  createGoogleGenerativeAI: jest.fn(() => jest.fn()),
   google: jest.fn(),
 }))
 
