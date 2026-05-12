@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import Script from "next/script";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
 import { Bot } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -55,11 +56,15 @@ export function ChatbotWidget() {
     }
   };
 
+  const pathname = usePathname();
+  // Move the widget up on chat pages to avoid overlapping the input bar
+  const isChatPage = pathname?.includes("/chat");
+
   return (
     <>
       <Button
         onClick={toggleChat}
-        className="fixed bottom-4 right-4 z-50 rounded-full shadow-lg p-0"
+        className={`fixed ${isChatPage ? "bottom-28" : "bottom-4"} right-4 z-50 rounded-full shadow-lg p-0 transition-all duration-300`}
         style={{ width: "64px", height: "64px" }}
       >
         <Bot className="h-10 w-10" />

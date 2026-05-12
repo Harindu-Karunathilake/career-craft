@@ -1,0 +1,108 @@
+
+> career-craft@0.1.0 build
+> next build
+
+⚠ Warning: Next.js inferred your workspace root, but it may not be correct.
+ We detected multiple lockfiles and selected the directory of C:\Users\harin\package-lock.json as the root directory.
+ To silence this warning, set `turbopack.root` in your Next.js config, or consider removing one of the lockfiles if it's not needed.
+   See https://nextjs.org/docs/app/api-reference/config/next-config-js/turbopack#root-directory for more information.
+ Detected additional lockfiles: 
+   * C:\Users\harin\OneDrive\Desktop\repos\career-craft\package-lock.json
+   * C:\Users\harin\OneDrive\Desktop\package-lock.json
+
+▲ Next.js 16.2.1 (Turbopack)
+- Environments: .env
+
+  Creating an optimized production build ...
+✓ Compiled successfully in 45s
+  Running TypeScript ...
+  Finished TypeScript in 2.1min ...
+  Collecting page data using 15 workers ...
+  Generating static pages using 15 workers (0/58) ...
+[Firebase] Connected to project: career-craft-ac840
+[Firebase] Connected to project: career-craft-ac840
+  Generating static pages using 15 workers (14/58) 
+[Firebase] Connected to project: career-craft-ac840
+  Generating static pages using 15 workers (28/58) 
+⚠ metadataBase property in metadata export is not set for resolving social open graph or twitter images, using "http://localhost:3000". See https://nextjs.org/docs/app/api-reference/functions/generate-metadata#metadatabase
+  Generating static pages using 15 workers (43/58) 
+✓ Generating static pages using 15 workers (58/58) in 11.2s
+  Finalizing page optimization ...
+
+Route (app)
+┌ ○ /
+├ ○ /_not-found
+├ ○ /admin
+├ ○ /admin/courses
+├ ○ /admin/payouts
+├ ○ /admin/settings
+├ ○ /admin/users
+├ ƒ /api/admin/payouts/mark-paid
+├ ƒ /api/auth/forgot-password
+├ ƒ /api/badges/og
+├ ƒ /api/chat
+├ ƒ /api/chatbase/auth
+├ ƒ /api/code-analysis
+├ ƒ /api/contact
+├ ƒ /api/interview/generate
+├ ƒ /api/job-recommendations
+├ ƒ /api/jobs
+├ ƒ /api/livekit/token
+├ ƒ /api/payhere/checkout
+├ ƒ /api/payhere/notify
+├ ƒ /api/payhere/sandbox-confirm
+├ ƒ /api/recommendations
+├ ƒ /api/resumes/[id]
+├ ƒ /api/resumes/[id]/download
+├ ƒ /api/resumes/analyze
+├ ƒ /api/resumes/list
+├ ƒ /api/resumes/upload
+├ ƒ /api/submit-code
+├ ƒ /api/tutor/request-payout
+├ ƒ /api/validate-role
+├ ƒ /badges/[userId]/[courseId]
+├ ○ /blog
+├ ƒ /courses/[courseId]
+├ ○ /dashboard
+├ ○ /forgot-password
+├ ○ /interview
+├ ƒ /interview/[id]
+├ ƒ /interview/[id]/feedback
+├ ○ /interview/active
+├ ○ /interview/setup
+├ ○ /login
+├ ○ /privacy
+├ ○ /profile
+├ ○ /published
+├ ○ /register
+├ ○ /resume
+├ ƒ /resume/[id]
+├ ○ /resume/analyze
+├ ○ /terms
+├ ○ /tutor
+├ ƒ /tutor/chat/[friendUid]
+├ ○ /tutor/community
+├ ○ /tutor/courses
+├ ƒ /tutor/courses/[courseId]
+├ ƒ /tutor/courses/[courseId]/edit
+├ ○ /tutor/courses/create
+├ ○ /tutor/earnings
+├ ○ /tutor/friends
+├ ○ /tutor/interviews
+├ ○ /tutor/profile
+├ ƒ /tutor/profile/[uid]
+├ ○ /tutor/resume
+├ ○ /tutor/settings
+├ ○ /user
+├ ƒ /user/chat/[friendUid]
+├ ○ /user/community
+├ ○ /user/friends
+├ ○ /user/interviews
+├ ƒ /user/profile/[uid]
+├ ○ /user/resume
+└ ○ /user/settings
+
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
+
