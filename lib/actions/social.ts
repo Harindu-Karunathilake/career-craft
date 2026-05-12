@@ -17,6 +17,7 @@ import {
   type Unsubscribe,
 } from "firebase/firestore"
 import { firebaseDb } from "@/lib/firebase"
+import { encryptMessage, decryptMessage } from "@/lib/encryption-client"
 import type { Friend, FriendRequest, ChatMessage, PublicUserProfile, AppNotification } from "@/types"
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -331,11 +332,12 @@ export async function sendMessage(
   senderInfo: { name: string; photo: string }
 ): Promise<void> {
   const trimmed = text.trim()
+  const encryptedText = encryptMessage(trimmed, chatId)
 
   // 1. Write the message
   await addDoc(collection(firebaseDb, "messages", chatId, "messages"), {
     senderId,
-    text: trimmed,
+    text: encryptedText,
     createdAt: serverTimestamp(),
   })
 
@@ -346,7 +348,7 @@ export async function sendMessage(
     senderUid: senderId,
     senderName: senderInfo.name,
     senderPhoto: senderInfo.photo,
-    text: trimmed.length > 80 ? trimmed.slice(0, 80) + "…" : trimmed,
+    text: encryptedText.length > 80 ? encryptedText.slice(0, 80) + "…" : encryptedText,
     read: false,
     createdAt: serverTimestamp(),
   })
@@ -365,7 +367,7 @@ export function subscribeToMessages(
       snap.docs.map((d) => ({
         id: d.id,
         senderId: d.data().senderId,
-        text: d.data().text,
+        text: decryptMessage(d.data().text, chatId),
         createdAt: d.data().createdAt,
       }))
     )
@@ -393,7 +395,14 @@ export function subscribeToMessageNotifications(
     q,
     (snap) => {
       callback(
-        snap.docs.map((d) => ({ id: d.id, ...d.data() } as AppNotification))
+        snap.docs.map((d) => {
+          const data = d.data()
+          return {
+            id: d.id,
+            ...data,
+            text: data.chatId ? decryptMessage(data.text, data.chatId) : data.text
+          } as AppNotification
+        })
       )
     },
     (err) => {
