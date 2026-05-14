@@ -102,11 +102,33 @@ export default function VoiceInterviewSession({ sessionId, interviewData }: Voic
         setIsSpeakingGlobal = setIsSpeaking;
         setLastMessageGlobal = setLastMessage;
 
+        // Suppress daily-js transport disconnect warnings
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+
+        const suppressLog = (...args: any[]) => {
+            const msg = args.join(' ');
+            if (typeof msg === 'string' && msg.includes('recv transport changed to disconnected')) {
+                return;
+            }
+            return false; // Not suppressed
+        };
+
+        console.log = (...args) => { if (suppressLog(...args) === false) originalLog(...args); };
+        console.warn = (...args) => { if (suppressLog(...args) === false) originalWarn(...args); };
+        console.error = (...args) => { if (suppressLog(...args) === false) originalError(...args); };
+
         return () => {
             setCallStatusGlobal = null;
             setMessagesGlobal = null;
             setIsSpeakingGlobal = null;
             setLastMessageGlobal = null;
+            
+            // Restore console
+            console.log = originalLog;
+            console.warn = originalWarn;
+            console.error = originalError;
         };
     }, []);
 
