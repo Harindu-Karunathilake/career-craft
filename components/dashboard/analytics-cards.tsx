@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Users, FileText, Briefcase } from "lucide-react"
+import { Users, FileText } from "lucide-react"
 import { motion, Variants } from "framer-motion"
 
 const itemVariants: Variants = {
@@ -21,16 +21,10 @@ export function AnalyticsCards({ interviewCount, resumeCount }: AnalyticsCardsPr
       helper: "Total interviews"
     },
     {
-      label: "Resumes tailored",
+      label: "Analyzed resumes",
       value: resumeCount,
       icon: FileText,
-      helper: "Optimized resumes"
-    },
-    {
-      label: "Active applications",
-      value: "0",
-      icon: Briefcase,
-      helper: "Coming soon"
+      helper: "Analyzed resumes"
     }
   ]
 

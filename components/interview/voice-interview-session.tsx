@@ -92,6 +92,7 @@ export default function VoiceInterviewSession({ sessionId, interviewData }: Voic
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [lastMessage, setLastMessage] = useState<string>("");
     const [isMuted, setIsMuted] = useState(false);
+    const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
     const vapiRef = useRef<any>(null);
 
     // Update the global setters every time this component renders
@@ -102,11 +103,33 @@ export default function VoiceInterviewSession({ sessionId, interviewData }: Voic
         setIsSpeakingGlobal = setIsSpeaking;
         setLastMessageGlobal = setLastMessage;
 
+        // Suppress daily-js transport disconnect warnings
+        const originalLog = console.log;
+        const originalWarn = console.warn;
+        const originalError = console.error;
+
+        const suppressLog = (...args: any[]) => {
+            const msg = args.join(' ');
+            if (typeof msg === 'string' && msg.includes('recv transport changed to disconnected')) {
+                return;
+            }
+            return false; // Not suppressed
+        };
+
+        console.log = (...args) => { if (suppressLog(...args) === false) originalLog(...args); };
+        console.warn = (...args) => { if (suppressLog(...args) === false) originalWarn(...args); };
+        console.error = (...args) => { if (suppressLog(...args) === false) originalError(...args); };
+
         return () => {
             setCallStatusGlobal = null;
             setMessagesGlobal = null;
             setIsSpeakingGlobal = null;
             setLastMessageGlobal = null;
+            
+            // Restore console
+            console.log = originalLog;
+            console.warn = originalWarn;
+            console.error = originalError;
         };
     }, []);
 
@@ -121,6 +144,7 @@ export default function VoiceInterviewSession({ sessionId, interviewData }: Voic
             return;
         }
 
+        setIsGeneratingFeedback(true);
         try {
             toast.success("Call ended. Transitioning to feedback...");
             const result = await generateFeedbackAction({ transcript: messages });
@@ -135,10 +159,12 @@ export default function VoiceInterviewSession({ sessionId, interviewData }: Voic
                 
                 router.push(`/interview/${sessionId}/feedback`);
             } else {
+               setIsGeneratingFeedback(false);
                alert("Failed to generate feedback.");
             }
 
         } catch (error) {
+            setIsGeneratingFeedback(false);
             console.error("Error saving feedback:", error);
             alert("Error saving interview results.");
         }
@@ -234,6 +260,21 @@ export default function VoiceInterviewSession({ sessionId, interviewData }: Voic
         <main className="relative flex min-h-screen w-full flex-col items-center justify-center overflow-hidden bg-black font-sans">
              {/* Background Effects */}
             <div className="pointer-events-none absolute inset-x-0 top-0 h-full bg-[radial-gradient(circle_at_center,rgba(16,185,129,0.1),transparent_70%)]" aria-hidden="true" />
+
+            {/* Loading Overlay */}
+            {isGeneratingFeedback && (
+                <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/80 backdrop-blur-sm">
+                    <div className="flex flex-col items-center gap-4">
+                        <div className="h-12 w-12 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin" />
+                        <p className="text-xl font-medium text-emerald-400 animate-pulse">
+                            Generating your interview feedback...
+                        </p>
+                        <p className="text-sm text-white/60">
+                            This may take a few moments
+                        </p>
+                    </div>
+                </div>
+            )}
 
             <div className="relative z-10 flex w-full max-w-5xl flex-col items-center gap-8 px-6">
                 

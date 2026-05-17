@@ -12,6 +12,10 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == uid;
     }
 
+    function isAdmin() {
+      return isSignedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
     // chatId = "{smallerUid}_{largerUid}". A participant's uid appears in the chatId.
     function isChatParticipant(chatId) {
       return chatId.matches('.*' + request.auth.uid + '.*');
@@ -82,7 +86,7 @@ service cloud.firestore {
     // covered by the per-document rule above. The collectionGroup rule
     // below handles the cross-user LIST query.
     match /{path=**}/interviews/{interviewId} {
-      allow read: if resource.data.isPublished == true;
+      allow read: if isSignedIn();
     }
 
     // ─── Friend Requests ────────────────────────────────────────────────────
