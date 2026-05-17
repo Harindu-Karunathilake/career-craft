@@ -188,10 +188,6 @@ export const notifyNextProblem = async (nextQuestion: string, currentCode: strin
             // vapi.say() may not be available on older bundle versions — silently skip
         }
 
-    } else if (status === 'FINISHED' || status === 'ERROR') {
-        // Session was ejected before/during evaluation — auto-restart with new question
-        // Small delay so Firestore state has fully settled
-        setTimeout(() => startAITutor(currentCode, nextQuestion), 800);
     }
-    // CONNECTING state: do nothing — let it finish connecting first
+    // If not ACTIVE, we do nothing. The AI tutor remains off until the user explicitly turns it on again.
 };

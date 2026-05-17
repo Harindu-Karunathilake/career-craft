@@ -6,12 +6,24 @@ import { ALL_PRIORITIZED_MODELS } from '@/constants/ai';
  * Retrieves all available Google AI API keys from the environment.
  */
 function getApiKeys(): string[] {
-    const keys = [
-        process.env.GOOGLE_GENERATIVE_AI_API_KEY,
-        process.env.GOOGLE_GENERATIVE_AI_API_KEY_2,
-        process.env.GOOGLE_GENERATIVE_AI_API_KEY_3,
-    ].filter(Boolean) as string[];
-    return keys.length > 0 ? keys : [''];
+    const keys: string[] = [];
+    
+    // Check the main key first
+    if (process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+        keys.push(process.env.GOOGLE_GENERATIVE_AI_API_KEY);
+    }
+    
+    // Dynamically collect any other keys (e.g. GOOGLE_GENERATIVE_AI_API_KEY_2, _3, etc.)
+    for (const [key, value] of Object.entries(process.env)) {
+        if (key !== 'GOOGLE_GENERATIVE_AI_API_KEY' && key.startsWith('GOOGLE_GENERATIVE_AI_API_KEY_') && value) {
+            keys.push(value);
+        }
+    }
+
+    // Clean up any stray backticks or whitespace, and remove duplicates
+    const cleanedKeys = Array.from(new Set(keys.map(k => k.replace(/`/g, '').trim()).filter(Boolean)));
+
+    return cleanedKeys.length > 0 ? cleanedKeys : [''];
 }
 
 /**
